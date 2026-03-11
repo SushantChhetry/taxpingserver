@@ -1,4 +1,5 @@
 import { pool } from './client';
+import type { DriveTokens } from '../drive/auth';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -6,7 +7,8 @@ export type Preparer = {
   id: string;
   name: string;
   email: string;
-  drive_folder_id: string;
+  drive_folder_id: string | null;
+  drive_tokens: DriveTokens | null;
   created_at: Date;
 };
 
@@ -16,6 +18,7 @@ export type Client = {
   name: string;
   mobile: string;
   tax_year: number;
+  drive_folder_id: string | null;
   created_at: Date;
 };
 
@@ -38,6 +41,7 @@ export type Message = {
   direction: 'inbound' | 'outbound';
   body: string;
   media_url: string | null;
+  drive_file_id: string | null;
   created_at: Date;
 };
 
@@ -160,6 +164,54 @@ export async function insertDeadLetter(data: DeadLetterParams): Promise<void> {
     `INSERT INTO dead_letter_queue (conversation_id, error_message, payload)
      VALUES ($1, $2, $3)`,
     [data.conversation_id, data.error_message, JSON.stringify(data.payload)]
+  );
+}
+
+export async function updatePreparerDriveToken(
+  preparerId: string,
+  tokens: DriveTokens
+): Promise<void> {
+  await pool.query(
+    `UPDATE preparers
+     SET drive_tokens = $2
+     WHERE id = $1`,
+    [preparerId, JSON.stringify(tokens)]
+  );
+}
+
+export async function upsertPendingClient(
+  mobile: string,
+  preparerId: string
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO pending_clients (mobile, preparer_id)
+     VALUES ($1, $2)
+     ON CONFLICT (mobile, preparer_id) DO NOTHING`,
+    [mobile, preparerId]
+  );
+}
+
+export async function updateClientDriveFolderId(
+  clientId: string,
+  folderId: string
+): Promise<void> {
+  await pool.query(
+    `UPDATE clients
+     SET drive_folder_id = $2
+     WHERE id = $1`,
+    [clientId, folderId]
+  );
+}
+
+export async function updateMessageDriveFileId(
+  messageId: string,
+  fileId: string
+): Promise<void> {
+  await pool.query(
+    `UPDATE messages
+     SET drive_file_id = $2
+     WHERE id = $1`,
+    [messageId, fileId]
   );
 }
 
