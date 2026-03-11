@@ -7,6 +7,7 @@ const REQUIRED_ENV_VARS = [
   'GOOGLE_CLIENT_SECRET',
   'GOOGLE_REDIRECT_URI',
   'PORT',
+  'BASE_URL',
 ] as const;
 
 type RequiredEnvVar = (typeof REQUIRED_ENV_VARS)[number];

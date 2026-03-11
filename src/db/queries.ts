@@ -35,6 +35,12 @@ export type Conversation = {
 
 export type ConversationWithClient = Conversation & { mobile: string };
 
+export type ConversationForFollowup = ConversationWithClient & {
+  client_name: string;
+  preparer_name: string;
+  preparer_twilio_number: string;
+};
+
 export type Message = {
   id: string;
   conversation_id: string;
@@ -54,8 +60,16 @@ export type InsertMessageParams = {
 
 export type DeadLetterParams = {
   conversation_id: string | null;
-  error_message: string;
-  payload: Record<string, unknown>;
+  message_id?: string | null;
+  error: string;
+  media_url?: string | null;
+};
+
+export type ConversationStatus = {
+  id: string;
+  status: 'active' | 'complete';
+  docs_collected: string[];
+  docs_pending: string[];
 };
 
 // ── Queries ──────────────────────────────────────────────────────────────────
@@ -94,13 +108,14 @@ export async function getClientByMobileAndPreparer(
 export async function createClient(
   preparerId: string,
   name: string,
-  mobile: string
+  mobile: string,
+  taxYear: number = 2027
 ): Promise<Client> {
   const result = await pool.query<Client>(
     `INSERT INTO clients (preparer_id, name, mobile, tax_year)
-     VALUES ($1, $2, $3, 2027)
+     VALUES ($1, $2, $3, $4)
      RETURNING *`,
-    [preparerId, name, mobile]
+    [preparerId, name, mobile, taxYear]
   );
   return result.rows[0];
 }
@@ -161,10 +176,22 @@ export async function insertMessage(data: InsertMessageParams): Promise<Message>
 
 export async function insertDeadLetter(data: DeadLetterParams): Promise<void> {
   await pool.query(
-    `INSERT INTO dead_letter_queue (conversation_id, error_message, payload)
-     VALUES ($1, $2, $3)`,
-    [data.conversation_id, data.error_message, JSON.stringify(data.payload)]
+    `INSERT INTO dead_letter_queue (conversation_id, message_id, error, media_url)
+     VALUES ($1, $2, $3, $4)`,
+    [data.conversation_id, data.message_id ?? null, data.error, data.media_url ?? null]
   );
+}
+
+export async function getConversationStatus(
+  conversationId: string
+): Promise<ConversationStatus | null> {
+  const result = await pool.query<ConversationStatus>(
+    `SELECT id, status, docs_collected, docs_pending
+     FROM conversations
+     WHERE id = $1`,
+    [conversationId]
+  );
+  return result.rows[0] ?? null;
 }
 
 export async function updatePreparerDriveToken(
@@ -227,4 +254,125 @@ export async function getStaleConversations(
     [hoursOld]
   );
   return result.rows;
+}
+
+export async function getStaleConversationsForFollowup(
+  hoursOld: number
+): Promise<ConversationForFollowup[]> {
+  const result = await pool.query<ConversationForFollowup>(
+    `SELECT DISTINCT ON (c.id)
+            c.*,
+            cl.mobile,
+            cl.name          AS client_name,
+            p.name           AS preparer_name,
+            pn.twilio_number AS preparer_twilio_number
+     FROM conversations c
+     JOIN clients cl       ON cl.id = c.client_id
+     JOIN preparers p      ON p.id  = cl.preparer_id
+     JOIN phone_numbers pn ON pn.preparer_id = p.id AND pn.active = true
+     WHERE c.status = 'active'
+       AND c.last_message_at < NOW() - ($1 * INTERVAL '1 hour')
+     ORDER BY c.id`,
+    [hoursOld]
+  );
+  return result.rows;
+}
+
+export async function touchConversation(conversationId: string): Promise<void> {
+  await pool.query(
+    `UPDATE conversations
+     SET last_message_at = NOW()
+     WHERE id = $1`,
+    [conversationId]
+  );
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+export type ClientDashboardRow = {
+  client_id: string;
+  client_name: string;
+  mobile: string;
+  tax_year: number;
+  client_folder_id: string | null;
+  conversation_id: string | null;
+  conv_status: 'active' | 'complete' | null;
+  docs_collected: string[] | null;
+  docs_pending: string[] | null;
+  last_message_at: Date | null;
+};
+
+export type DashboardData = {
+  preparer: Pick<Preparer, 'id' | 'name' | 'email' | 'drive_folder_id'>;
+  clients: ClientDashboardRow[];
+  unresolvedDeadLetterCount: number;
+};
+
+export type ClientWithTwilio = {
+  id: string;
+  name: string;
+  mobile: string;
+  preparer_id: string;
+  drive_folder_id: string | null;
+  tax_year: number;
+  twilio_number: string;
+};
+
+export async function getPreparerDashboard(preparerId: string): Promise<DashboardData | null> {
+  const prepResult = await pool.query<Pick<Preparer, 'id' | 'name' | 'email' | 'drive_folder_id'>>(
+    `SELECT id, name, email, drive_folder_id FROM preparers WHERE id = $1`,
+    [preparerId]
+  );
+  const preparer = prepResult.rows[0];
+  if (!preparer) return null;
+
+  const clientsResult = await pool.query<ClientDashboardRow>(
+    `SELECT DISTINCT ON (c.id)
+            c.id              AS client_id,
+            c.name            AS client_name,
+            c.mobile,
+            c.tax_year,
+            c.drive_folder_id AS client_folder_id,
+            conv.id           AS conversation_id,
+            conv.status       AS conv_status,
+            conv.docs_collected,
+            conv.docs_pending,
+            conv.last_message_at
+     FROM clients c
+     LEFT JOIN conversations conv ON conv.client_id = c.id AND conv.tax_year = 2027
+     WHERE c.preparer_id = $1
+     ORDER BY c.id, conv.status DESC NULLS LAST, conv.last_message_at DESC NULLS LAST`,
+    [preparerId]
+  );
+
+  const dlResult = await pool.query<{ count: string }>(
+    `SELECT COUNT(*) AS count
+     FROM dead_letter_queue dlq
+     JOIN conversations conv ON conv.id = dlq.conversation_id
+     JOIN clients cl ON cl.id = conv.client_id
+     WHERE cl.preparer_id = $1 AND dlq.resolved = FALSE`,
+    [preparerId]
+  );
+
+  const clients = [...clientsResult.rows].sort((a, b) =>
+    a.client_name.localeCompare(b.client_name)
+  );
+  return {
+    preparer,
+    clients,
+    unresolvedDeadLetterCount: parseInt(dlResult.rows[0]?.count ?? '0', 10),
+  };
+}
+
+export async function getClientWithTwilio(clientId: string): Promise<ClientWithTwilio | null> {
+  const result = await pool.query<ClientWithTwilio>(
+    `SELECT c.id, c.name, c.mobile, c.preparer_id, c.drive_folder_id, c.tax_year,
+            pn.twilio_number
+     FROM clients c
+     JOIN phone_numbers pn ON pn.preparer_id = c.preparer_id AND pn.active = TRUE
+     WHERE c.id = $1
+     LIMIT 1`,
+    [clientId]
+  );
+  return result.rows[0] ?? null;
 }

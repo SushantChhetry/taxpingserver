@@ -123,7 +123,7 @@ describe('getClientByMobileAndPreparer', () => {
 });
 
 describe('createClient', () => {
-  it('inserts and returns the new client', async () => {
+  it('inserts and returns the new client with default taxYear 2027', async () => {
     mockQuery.mockResolvedValueOnce(rows([client]));
 
     const result = await createClient('prep-1', 'Bob', '+15550001111');
@@ -131,9 +131,17 @@ describe('createClient', () => {
     expect(result).toEqual(client);
     const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('INSERT INTO clients');
-    expect(sql).toContain('2027');
     expect(sql).toContain('RETURNING *');
-    expect(params).toEqual(['prep-1', 'Bob', '+15550001111']);
+    expect(params).toEqual(['prep-1', 'Bob', '+15550001111', 2027]);
+  });
+
+  it('inserts with explicit taxYear', async () => {
+    mockQuery.mockResolvedValueOnce(rows([client]));
+
+    await createClient('prep-1', 'Bob', '+15550001111', 2026);
+
+    const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(params[3]).toBe(2026);
   });
 });
 
@@ -215,34 +223,37 @@ describe('insertMessage', () => {
 });
 
 describe('insertDeadLetter', () => {
-  it('inserts into dead_letter_queue', async () => {
+  it('inserts into dead_letter_queue with error and media_url', async () => {
     mockQuery.mockResolvedValueOnce(rows([]));
 
     const data: DeadLetterParams = {
       conversation_id: 'conv-1',
-      error_message: 'Drive upload failed',
-      payload: { fileId: 'abc' },
+      message_id: 'msg-1',
+      error: 'Drive upload failed',
+      media_url: 'https://media.example.com/img.jpg',
     };
     await insertDeadLetter(data);
 
     const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('INSERT INTO dead_letter_queue');
     expect(params[0]).toBe('conv-1');
-    expect(params[1]).toBe('Drive upload failed');
-    expect(params[2]).toBe(JSON.stringify({ fileId: 'abc' }));
+    expect(params[1]).toBe('msg-1');
+    expect(params[2]).toBe('Drive upload failed');
+    expect(params[3]).toBe('https://media.example.com/img.jpg');
   });
 
-  it('accepts null conversation_id', async () => {
+  it('accepts null conversation_id and optional fields', async () => {
     mockQuery.mockResolvedValueOnce(rows([]));
 
     await insertDeadLetter({
       conversation_id: null,
-      error_message: 'orphan error',
-      payload: {},
+      error: 'orphan error',
     });
 
     const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(params[0]).toBeNull();
+    expect(params[1]).toBeNull();
+    expect(params[3]).toBeNull();
   });
 });
 

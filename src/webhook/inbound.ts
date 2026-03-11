@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import axios from 'axios';
-import { validateRequest } from 'twilio';
+import twilio from 'twilio';
+const { validateRequest } = twilio;
 import { sendSMS, respondToTwilio } from './sender';
 import { validateEnv, type Env } from '../utils/env';
 import {
@@ -55,7 +56,7 @@ function parseTwilioPayload(body: Record<string, string>): TwilioPayload {
 function isValidTwilioSignature(req: Request, env: Env): boolean {
   const signature = req.headers['x-twilio-signature'];
   if (typeof signature !== 'string') return false;
-  const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+  const url = `${env.BASE_URL}/webhook/inbound`;
   return validateRequest(env.TWILIO_AUTH_TOKEN, signature, url, req.body as Record<string, string>);
 }
 
@@ -211,8 +212,7 @@ async function ensureClientFolder(
     console.error('[step7] Preparer Drive not configured:', preparer.id);
     await insertDeadLetter({
       conversation_id: conversationId,
-      error_message: 'Preparer Drive not configured',
-      payload: { preparerId: preparer.id },
+      error: 'Preparer Drive not configured',
     });
     return null;
   }
@@ -229,8 +229,7 @@ async function ensureClientFolder(
     console.error('[step7] Failed to create client folder:', err);
     await insertDeadLetter({
       conversation_id: conversationId,
-      error_message: toErrMsg(err),
-      payload: { clientId: client.id },
+      error: toErrMsg(err),
     });
     return null;
   }
@@ -263,8 +262,9 @@ async function step7_drive(
     console.error('[step7] Drive write failed:', result.error);
     await insertDeadLetter({
       conversation_id: conversation.id,
-      error_message: result.error ?? 'Drive write failed',
-      payload: { fileName },
+      message_id: inboundMsg.id,
+      error: result.error ?? 'Drive write failed',
+      media_url: payload.mediaUrl,
     });
     return null;
   }
@@ -319,9 +319,12 @@ async function processInbound(payload: TwilioPayload, env: Env): Promise<void> {
   const handled = await step6_handleClassification(classification, route, payload);
   if (handled) return;
 
-  // step7 failure is logged + dead-lettered — step8 still runs (no client-visible error)
-  await step7_drive(buffer, payload, classification, route, inboundMsg);
-  await step8_finalize(route, classification, payload);
+  const driveFileId = await step7_drive(buffer, payload, classification, route, inboundMsg);
+  if (driveFileId !== null) {
+    await step8_finalize(route, classification, payload);
+  } else {
+    await replyAndLog('Got it, filing your document now.', payload, route.conversation.id);
+  }
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
