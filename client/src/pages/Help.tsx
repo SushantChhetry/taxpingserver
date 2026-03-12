@@ -92,8 +92,8 @@ const STATUS_GUIDES: StatusGuide[] = [
     title: 'Not started',
     body:
       'The client has not been kicked off yet. Start here with Send Request so the thread begins cleanly.',
-    accentColor: '#21449C',
-    accentBackground: '#EEF2FF',
+    accentColor: 'var(--brand-primary-dark, #21449C)',
+    accentBackground: 'var(--brand-primary-light, #EEF2FF)',
     icon: <Send size={18} />,
   },
   {
@@ -415,6 +415,7 @@ export default function Help() {
     name: 'TaxPing',
     email: 'pilot@taxping.ai',
     businessName: 'Your practice',
+    branding: { themeId: null, color: null },
   };
   const workspaceName = preparer.businessName?.trim() || preparer.name || 'your practice';
   const clients = data?.clients ?? [];
@@ -487,7 +488,7 @@ export default function Help() {
               borderRadius: 28,
               padding: 24,
               color: 'white',
-              background: 'linear-gradient(135deg, #132450 0%, #1F469F 54%, #78D0F6 120%)',
+              background: 'linear-gradient(135deg, var(--brand-primary-dark, #132450) 0%, var(--brand-primary, #1F469F) 54%, color-mix(in srgb, var(--brand-primary, #78D0F6) 45%, white) 120%)',
               boxShadow: '0 24px 48px rgba(16, 36, 81, 0.18)',
             }}
           >

@@ -38,12 +38,22 @@ export interface Client {
 }
 
 export interface DashboardData {
-  preparer: { id: string; name: string; email: string; businessName: string };
+  preparer: {
+    id: string;
+    name: string;
+    email: string;
+    businessName: string;
+    branding: {
+      themeId: string | null;
+      color: string | null;
+    };
+  };
   clients: Client[];
   stats: { total: number; waiting: number; complete: number; issues: number };
 }
 
 export interface BrandProfile {
+  themeId: string | null;
   color: string | null;
   tagline: string | null;
   logoUrl: string | null;

@@ -77,6 +77,7 @@ export default function PublicQr() {
     'Simple tax document collection that still looks like your firm.';
   const brandLinks = getBrandLinks(
     data?.preparer.branding ?? {
+      themeId: null,
       color: null,
       tagline: null,
       logoUrl: null,

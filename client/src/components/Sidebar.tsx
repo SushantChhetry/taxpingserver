@@ -22,9 +22,9 @@ interface NavItemProps {
 function NavItem({ icon, label, active = false, to }: NavItemProps) {
   const [hovered, setHovered] = React.useState(false);
 
-  const bg = active ? '#EEF2FF' : hovered ? '#F7F8FC' : 'transparent';
-  const color = active ? '#3B6FE8' : '#6B7280';
-  const iconColor = active ? '#3B6FE8' : '#9CA3AF';
+  const bg = active ? 'var(--brand-primary-light, #EEF2FF)' : hovered ? '#F7F8FC' : 'transparent';
+  const color = active ? 'var(--brand-primary, #3B6FE8)' : '#6B7280';
+  const iconColor = active ? 'var(--brand-primary, #3B6FE8)' : '#9CA3AF';
 
   const content = (
     <>
@@ -134,8 +134,8 @@ export default function Sidebar({
               width: 28,
               height: 28,
               borderRadius: '50%',
-              background: '#EEF2FF',
-              color: '#3B6FE8',
+              background: 'var(--brand-primary-light, #EEF2FF)',
+              color: 'var(--brand-primary, #3B6FE8)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

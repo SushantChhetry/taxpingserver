@@ -10,6 +10,7 @@ export type Preparer = {
   name: string;
   email: string;
   business_name: string | null;
+  brand_theme_id: string | null;
   brand_color: string | null;
   brand_tagline: string | null;
   brand_logo_url: string | null;
@@ -90,6 +91,7 @@ export type PreparerSettings = Pick<
   | 'name'
   | 'email'
   | 'business_name'
+  | 'brand_theme_id'
   | 'brand_color'
   | 'brand_tagline'
   | 'brand_logo_url'
@@ -108,6 +110,7 @@ export type PublicPreparer = Pick<
   | 'id'
   | 'name'
   | 'business_name'
+  | 'brand_theme_id'
   | 'brand_color'
   | 'brand_tagline'
   | 'brand_logo_url'
@@ -293,6 +296,7 @@ export async function getPreparerSettings(
             p.name,
             p.email,
             p.business_name,
+            p.brand_theme_id,
             p.brand_color,
             p.brand_tagline,
             p.brand_logo_url,
@@ -319,6 +323,7 @@ export async function getPublicPreparer(preparerId: string): Promise<PublicPrepa
     `SELECT p.id,
             p.name,
             p.business_name,
+            p.brand_theme_id,
             p.brand_color,
             p.brand_tagline,
             p.brand_logo_url,
@@ -341,6 +346,7 @@ export async function updatePreparerSettings(
   preparerId: string,
   input: {
     businessName: string;
+    brandThemeId: string | null;
     brandColor: string | null;
     brandTagline: string | null;
     brandLogoUrl: string | null;
@@ -354,19 +360,21 @@ export async function updatePreparerSettings(
   const updateResult = await pool.query<{ id: string }>(
     `UPDATE preparers
      SET business_name = $2,
-         brand_color = $3,
-         brand_tagline = $4,
-         brand_logo_url = $5,
-         website_url = $6,
-         instagram_url = $7,
-         linkedin_url = $8,
-         auto_followup_enabled = $9,
-         auto_followup_hours = $10
+         brand_theme_id = $3,
+         brand_color = $4,
+         brand_tagline = $5,
+         brand_logo_url = $6,
+         website_url = $7,
+         instagram_url = $8,
+         linkedin_url = $9,
+         auto_followup_enabled = $10,
+         auto_followup_hours = $11
      WHERE id = $1
      RETURNING id`,
     [
       preparerId,
       input.businessName,
+      input.brandThemeId,
       input.brandColor,
       input.brandTagline,
       input.brandLogoUrl,
@@ -481,7 +489,7 @@ export type ClientDashboardRow = {
 };
 
 export type DashboardData = {
-  preparer: Pick<Preparer, 'id' | 'name' | 'email' | 'business_name' | 'drive_folder_id'>;
+  preparer: Pick<Preparer, 'id' | 'name' | 'email' | 'business_name' | 'brand_theme_id' | 'brand_color' | 'drive_folder_id'>;
   clients: ClientDashboardRow[];
   unresolvedDeadLetterCount: number;
 };
@@ -499,8 +507,8 @@ export type ClientWithTwilio = {
 };
 
 export async function getPreparerDashboard(preparerId: string): Promise<DashboardData | null> {
-  const prepResult = await pool.query<Pick<Preparer, 'id' | 'name' | 'email' | 'business_name' | 'drive_folder_id'>>(
-    `SELECT id, name, email, business_name, drive_folder_id
+  const prepResult = await pool.query<Pick<Preparer, 'id' | 'name' | 'email' | 'business_name' | 'brand_theme_id' | 'brand_color' | 'drive_folder_id'>>(
+    `SELECT id, name, email, business_name, brand_theme_id, brand_color, drive_folder_id
      FROM preparers
      WHERE id = $1`,
     [preparerId]

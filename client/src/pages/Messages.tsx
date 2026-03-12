@@ -37,7 +37,13 @@ export default function Messages() {
       .finally(() => setLoading(false));
   }, [preparerId]);
 
-  const preparer = data?.preparer ?? { id: preparerId ?? '', name: '', email: '', businessName: '' };
+  const preparer = data?.preparer ?? {
+    id: preparerId ?? '',
+    name: '',
+    email: '',
+    businessName: '',
+    branding: { themeId: null, color: null },
+  };
   const clients = data?.clients ?? [];
   const searchValue = search.trim().toLowerCase();
 
@@ -93,10 +99,10 @@ export default function Messages() {
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: '#132450' }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--brand-primary-dark, #132450)' }}>
                     Messages
                   </div>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 34, height: 26, padding: '0 10px', borderRadius: 999, background: '#EEF2FF', color: '#21449C', fontSize: 12, fontWeight: 700 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 34, height: 26, padding: '0 10px', borderRadius: 999, background: 'var(--brand-primary-light, #EEF2FF)', color: 'var(--brand-primary-dark, #21449C)', fontSize: 12, fontWeight: 700 }}>
                     {loading ? '—' : clients.length}
                   </span>
                 </div>
@@ -119,9 +125,9 @@ export default function Messages() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginTop: 18 }}>
               {[
-                { label: 'Recent replies', value: recentReplyCount, tone: '#21449C', bg: '#F5F8FF', border: '#DCE7FF' },
+                { label: 'Recent replies', value: recentReplyCount, tone: 'var(--brand-primary-dark, #21449C)', bg: 'var(--brand-primary-surface, #F5F8FF)', border: 'var(--brand-primary-border, #DCE7FF)' },
                 { label: 'Waiting on client', value: waitingOnClientCount, tone: '#B45309', bg: '#FFF8F0', border: '#F8D8AD' },
-                { label: 'No reply yet', value: noReplyYetCount, tone: '#7C3AED', bg: '#FBF7FF', border: '#E9D9FE' },
+                { label: 'No reply yet', value: noReplyYetCount, tone: 'var(--brand-primary, #7C3AED)', bg: 'var(--brand-primary-light, #FBF7FF)', border: 'var(--brand-primary-border, #E9D9FE)' },
               ].map((item) => (
                 <div key={item.label} style={{ display: 'grid', gap: 6, padding: '14px 16px', borderRadius: 18, border: `1px solid ${item.border}`, background: item.bg }}>
                   <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#8B97B0' }}>
@@ -142,10 +148,10 @@ export default function Messages() {
               ) : filteredClients.length === 0 ? (
                 <div style={{ display: 'grid', placeItems: 'center', padding: '64px 24px', borderRadius: 24, border: '1px dashed #D9E3F3', background: '#FBFCFF' }}>
                   <div style={{ textAlign: 'center', maxWidth: 360 }}>
-                    <div style={{ width: 56, height: 56, margin: '0 auto', borderRadius: 18, display: 'grid', placeItems: 'center', background: '#EEF2FF', color: '#21449C' }}>
+                    <div style={{ width: 56, height: 56, margin: '0 auto', borderRadius: 18, display: 'grid', placeItems: 'center', background: 'var(--brand-primary-light, #EEF2FF)', color: 'var(--brand-primary-dark, #21449C)' }}>
                       <Inbox size={24} />
                     </div>
-                    <div style={{ marginTop: 14, fontSize: 18, fontWeight: 700, color: '#132450' }}>No matching threads</div>
+                    <div style={{ marginTop: 14, fontSize: 18, fontWeight: 700, color: 'var(--brand-primary-dark, #132450)' }}>No matching threads</div>
                     <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: '#6B7280' }}>
                       Try a different name or phone number.
                     </div>
@@ -165,7 +171,7 @@ export default function Messages() {
                       style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.3fr) minmax(160px, 0.8fr) minmax(180px, 0.9fr) auto', gap: 16, alignItems: 'center', padding: '18px 20px', borderRadius: 22, border: '1px solid #E5EBF4', background: 'white', color: 'inherit', textDecoration: 'none' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#EEF2FF', color: '#3B6FE8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--brand-primary-light, #EEF2FF)', color: 'var(--brand-primary, #3B6FE8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                           {getInitials(client.name)}
                         </div>
                         <div style={{ minWidth: 0 }}>
@@ -206,7 +212,7 @@ export default function Messages() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#21449C', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--brand-primary-dark, #21449C)', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
                         Open thread
                         <ArrowRight size={15} />
                       </div>

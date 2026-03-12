@@ -384,9 +384,9 @@ function ChatBubble({ message }: { message: ChatMessage }) {
           maxWidth: '82%',
           borderRadius: outbound ? '18px 18px 6px 18px' : '18px 18px 18px 6px',
           padding: '12px 14px',
-          background: outbound ? '#17336D' : '#F3F7FF',
-          color: outbound ? 'white' : '#17336D',
-          border: outbound ? '1px solid #17336D' : '1px solid #DCE7FF',
+          background: outbound ? 'var(--brand-primary-dark, #17336D)' : 'var(--brand-primary-light, #F3F7FF)',
+          color: outbound ? 'white' : 'var(--brand-primary-dark, #17336D)',
+          border: outbound ? '1px solid var(--brand-primary-dark, #17336D)' : '1px solid var(--brand-primary-border, #DCE7FF)',
           fontSize: 14,
           lineHeight: 1.5,
           whiteSpace: 'pre-wrap',
@@ -410,9 +410,9 @@ function SignalRow({
   tone: 'neutral' | 'positive' | 'warning';
 }) {
   const accent =
-    tone === 'positive' ? '#1D7A46' : tone === 'warning' ? '#C96A12' : '#21449C';
+    tone === 'positive' ? '#1D7A46' : tone === 'warning' ? '#C96A12' : 'var(--brand-primary-dark, #21449C)';
   const background =
-    tone === 'positive' ? '#F1FBF4' : tone === 'warning' ? '#FFF7ED' : '#F5F8FF';
+    tone === 'positive' ? '#F1FBF4' : tone === 'warning' ? '#FFF7ED' : 'var(--brand-primary-surface, #F5F8FF)';
 
   return (
     <div
@@ -549,7 +549,7 @@ export default function Overview() {
               borderRadius: 28,
               padding: 24,
               color: 'white',
-              background: 'linear-gradient(135deg, #132450 0%, #1F469F 54%, #78D0F6 120%)',
+              background: 'linear-gradient(135deg, var(--brand-primary-dark, #132450) 0%, var(--brand-primary, #1F469F) 54%, color-mix(in srgb, var(--brand-primary, #78D0F6) 45%, white) 120%)',
               boxShadow: '0 24px 48px rgba(16, 36, 81, 0.18)',
             }}
           >
@@ -777,8 +777,8 @@ export default function Overview() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: '#EDF4FF',
-                        color: '#21449C',
+                        background: 'var(--brand-primary-light, #EDF4FF)',
+                        color: 'var(--brand-primary-dark, #21449C)',
                       }}
                     >
                       <MessageSquareText size={20} />
@@ -801,8 +801,8 @@ export default function Overview() {
                     gap: 8,
                     borderRadius: 999,
                     padding: '8px 12px',
-                    background: '#F5F8FF',
-                    color: '#21449C',
+                    background: 'var(--brand-primary-surface, #F5F8FF)',
+                    color: 'var(--brand-primary-dark, #21449C)',
                     fontSize: 12,
                     fontWeight: 700,
                   }}
@@ -820,7 +820,7 @@ export default function Overview() {
                   overflowY: 'auto',
                   borderRadius: 20,
                   border: '1px solid #EEF2FB',
-                  background: 'linear-gradient(180deg, #FBFDFF 0%, #F5F8FF 100%)',
+                  background: 'linear-gradient(180deg, #FBFDFF 0%, var(--brand-primary-surface, #F5F8FF) 100%)',
                   padding: 16,
                   display: 'grid',
                   gap: 12,
@@ -845,7 +845,7 @@ export default function Overview() {
                       style={{
                         border: '1px solid #DCE7FF',
                         background: '#F8FAFF',
-                        color: '#21449C',
+                        color: 'var(--brand-primary-dark, #21449C)',
                         borderRadius: 999,
                         padding: '9px 12px',
                         fontFamily: 'inherit',
@@ -900,7 +900,7 @@ export default function Overview() {
                     height: 52,
                     border: 'none',
                     borderRadius: 16,
-                    background: '#21449C',
+                    background: 'var(--brand-primary-dark, #21449C)',
                     color: 'white',
                     display: 'flex',
                     alignItems: 'center',

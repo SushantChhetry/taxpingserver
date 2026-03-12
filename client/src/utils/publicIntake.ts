@@ -1,7 +1,7 @@
 import type { BrandProfile, PublicPreparerData } from '../types';
+import { DEFAULT_BRAND_COLOR, normalizeHexColor } from './brandThemes';
 
 const DEFAULT_OPENING_TEXT = "Hi, I'm ready to send my tax documents.";
-export const DEFAULT_BRAND_COLOR = '#2E5ED4';
 
 export const DEMO_PREPARER_ID = 'demo';
 
@@ -12,6 +12,7 @@ export const DEMO_PUBLIC_PREPARER: PublicPreparerData = {
     twilioNumber: '+15550102048',
     taxYear: new Date().getFullYear(),
     branding: {
+      themeId: 'classic-blue',
       color: '#1D4ED8',
       tagline: 'Clean, calm filing for busy clients.',
       logoUrl: null,
@@ -60,7 +61,7 @@ export function formatPhoneForDisplay(phone: string | null): string {
 }
 
 export function getBrandColor(color: string | null | undefined): string {
-  return /^#[0-9A-Fa-f]{6}$/.test(color ?? '') ? String(color).toUpperCase() : DEFAULT_BRAND_COLOR;
+  return normalizeHexColor(color) ?? DEFAULT_BRAND_COLOR;
 }
 
 export function getBrandTint(color: string, alpha: string): string {

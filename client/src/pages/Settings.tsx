@@ -23,11 +23,19 @@ import { getPreparerSettings, updatePreparerSettings } from '../api';
 import type { PreparerSettingsData } from '../types';
 import Sidebar from '../components/Sidebar';
 import { ToastContainer, toast } from '../components/Toast';
+import { persistDashboardTheme } from '../components/DashboardThemeProvider';
+import {
+  BRAND_THEMES,
+  getBrandThemeById,
+  getBrandThemeStyle,
+  normalizeHexColor,
+  resolveBrandTheme,
+} from '../utils/brandThemes';
 
 const FOLLOWUP_OPTIONS = [24, 48, 72, 96];
 
 function getPreviewColor(color: string): string {
-  return /^#[0-9A-Fa-f]{6}$/.test(color.trim()) ? color.trim().toUpperCase() : '#3B6FE8';
+  return normalizeHexColor(color) ?? '#3B6FE8';
 }
 
 function DetailCard({
@@ -91,6 +99,7 @@ export default function Settings() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     businessName: '',
+    brandThemeId: '',
     brandColor: '',
     brandTagline: '',
     brandLogoUrl: '',
@@ -110,6 +119,7 @@ export default function Settings() {
         setData(response);
         setForm({
           businessName: response.preparer.businessName,
+          brandThemeId: response.preparer.branding.themeId ?? '',
           brandColor: response.preparer.branding.color ?? '',
           brandTagline: response.preparer.branding.tagline ?? '',
           brandLogoUrl: response.preparer.branding.logoUrl ?? '',
@@ -134,8 +144,9 @@ export default function Settings() {
     autoFollowupHours: 48,
     twilioNumber: null,
     driveConnected: false,
-    branding: {
-      color: null,
+      branding: {
+        themeId: null,
+        color: null,
       tagline: null,
       logoUrl: null,
       websiteUrl: null,
@@ -145,16 +156,20 @@ export default function Settings() {
   };
 
   const trimmedBusinessName = form.businessName.trim();
+  const trimmedBrandThemeId = form.brandThemeId.trim();
   const trimmedBrandColor = form.brandColor.trim();
   const trimmedBrandTagline = form.brandTagline.trim();
   const trimmedBrandLogoUrl = form.brandLogoUrl.trim();
   const trimmedWebsiteUrl = form.websiteUrl.trim();
   const trimmedInstagramUrl = form.instagramUrl.trim();
   const trimmedLinkedinUrl = form.linkedinUrl.trim();
+  const selectedTheme = getBrandThemeById(trimmedBrandThemeId);
+  const effectiveBrandColor = selectedTheme?.primary ?? trimmedBrandColor;
   const hasChanges = Boolean(
     data &&
     (
       trimmedBusinessName !== data.preparer.businessName ||
+      trimmedBrandThemeId !== (data.preparer.branding.themeId ?? '') ||
       trimmedBrandColor !== (data.preparer.branding.color ?? '') ||
       trimmedBrandTagline !== (data.preparer.branding.tagline ?? '') ||
       trimmedBrandLogoUrl !== (data.preparer.branding.logoUrl ?? '') ||
@@ -166,7 +181,11 @@ export default function Settings() {
     )
   );
 
-  const previewColor = getPreviewColor(trimmedBrandColor);
+  const previewTheme = resolveBrandTheme({
+    themeId: trimmedBrandThemeId || null,
+    color: effectiveBrandColor,
+  });
+  const previewColor = getPreviewColor(effectiveBrandColor);
   const previewTagline = trimmedBrandTagline || 'Modern, simple document collection for busy clients.';
   const previewLogoUrl = trimmedBrandLogoUrl || logo;
   const previewLinks = [
@@ -174,6 +193,15 @@ export default function Settings() {
     { label: 'Instagram', value: trimmedInstagramUrl, icon: <Instagram size={14} /> },
     { label: 'LinkedIn', value: trimmedLinkedinUrl, icon: <Linkedin size={14} /> },
   ].filter((item) => item.value);
+
+  function resetToDefaultTheme() {
+    const defaultTheme = getBrandThemeById('classic-blue');
+    setForm((prev) => ({
+      ...prev,
+      brandThemeId: 'classic-blue',
+      brandColor: defaultTheme?.primary ?? '#2E5ED4',
+    }));
+  }
 
   async function handleSave(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -183,7 +211,8 @@ export default function Settings() {
     try {
       const updated = await updatePreparerSettings(preparerId, {
         businessName: trimmedBusinessName,
-        brandColor: trimmedBrandColor,
+        brandThemeId: trimmedBrandThemeId,
+        brandColor: selectedTheme?.primary ?? trimmedBrandColor,
         brandTagline: trimmedBrandTagline,
         brandLogoUrl: trimmedBrandLogoUrl,
         websiteUrl: trimmedWebsiteUrl,
@@ -195,6 +224,7 @@ export default function Settings() {
       setData(updated);
       setForm({
         businessName: updated.preparer.businessName,
+        brandThemeId: updated.preparer.branding.themeId ?? '',
         brandColor: updated.preparer.branding.color ?? '',
         brandTagline: updated.preparer.branding.tagline ?? '',
         brandLogoUrl: updated.preparer.branding.logoUrl ?? '',
@@ -204,6 +234,7 @@ export default function Settings() {
         autoFollowupEnabled: updated.preparer.autoFollowupEnabled,
         autoFollowupHours: updated.preparer.autoFollowupHours,
       });
+      persistDashboardTheme(preparerId, updated.preparer.branding);
       toast('Settings saved', 'success');
       setError(null);
     } catch {
@@ -219,7 +250,7 @@ export default function Settings() {
         <p style={{ color: '#EF4444', fontSize: 14 }}>{error}</p>
         <button
           onClick={() => window.location.reload()}
-          style={{ background: '#3B6FE8', color: 'white', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          style={{ background: 'var(--brand-primary, #3B6FE8)', color: 'white', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
         >
           Retry
         </button>
@@ -228,7 +259,7 @@ export default function Settings() {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#F7F8FC' }}>
+    <div style={{ ...getBrandThemeStyle(previewTheme), display: 'flex', minHeight: '100vh', background: '#F7F8FC' }}>
       <Sidebar
         preparerId={preparerId ?? ''}
         preparerName={preparer.name}
@@ -280,7 +311,7 @@ export default function Settings() {
               padding: '10px 12px',
               borderRadius: 10,
               background: '#F7F8FC',
-              border: '1px solid #EEF2FF',
+              border: '1px solid var(--brand-primary-light, #EEF2FF)',
               minWidth: 220,
             }}>
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9CA3AF' }}>
@@ -302,7 +333,7 @@ export default function Settings() {
                 background: '#FCFCFD',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-                  <Building2 size={18} color="#3B6FE8" />
+                  <Building2 size={18} color="var(--brand-primary, #3B6FE8)" />
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>Workspace identity</div>
                     <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 3 }}>
@@ -341,20 +372,100 @@ export default function Settings() {
                 padding: 22,
                 background: '#FCFCFD',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-                  <Palette size={18} color="#3B6FE8" />
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>Brand kit</div>
-                    <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 3 }}>
-                      These fields shape your public QR and signup pages. Leave any field blank to use the TaxPing placeholder treatment.
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Palette size={18} color="var(--brand-primary, #3B6FE8)" />
+                    <div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>Brand kit</div>
+                      <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 3 }}>
+                        These fields shape your public QR and signup pages. Leave any field blank to use the TaxPing placeholder treatment.
+                      </div>
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={resetToDefaultTheme}
+                    title="Revert to default TaxPing theme"
+                    aria-label="Revert to default TaxPing theme"
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 10,
+                      border: '1px solid #D7DCE8',
+                      background: 'white',
+                      display: 'grid',
+                      placeItems: 'center',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <img
+                      src={logo}
+                      alt="TaxPing default theme"
+                      style={{ width: 18, height: 18, objectFit: 'contain' }}
+                    />
+                  </button>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 8 }}>
+                      Theme palette
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+                      {BRAND_THEMES.map((theme) => {
+                        const selected = form.brandThemeId === theme.id;
+                        return (
+                          <button
+                            key={theme.id}
+                            type="button"
+                            onClick={() => setForm((prev) => ({ ...prev, brandThemeId: theme.id, brandColor: theme.primary }))}
+                            style={{
+                              border: `1px solid ${selected ? theme.primary : '#D7DCE8'}`,
+                              borderRadius: 14,
+                              padding: 12,
+                              background: selected ? theme.light : 'white',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              fontFamily: 'inherit',
+                            }}
+                          >
+                            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                              <span style={{ width: 22, height: 22, borderRadius: 999, background: theme.primary, display: 'block' }} />
+                              <span style={{ width: 22, height: 22, borderRadius: 999, background: theme.dark, display: 'block' }} />
+                              <span style={{ width: 22, height: 22, borderRadius: 999, background: theme.light, border: '1px solid rgba(148,163,184,0.28)', display: 'block' }} />
+                            </div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>{theme.name}</div>
+                            <div style={{ marginTop: 4, fontSize: 12, lineHeight: 1.5, color: '#6B7280' }}>{theme.description}</div>
+                          </button>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, brandThemeId: '' }))}
+                        style={{
+                          border: `1px solid ${form.brandThemeId === '' ? 'var(--brand-primary, #3B6FE8)' : '#D7DCE8'}`,
+                          borderRadius: 14,
+                          padding: 12,
+                          background: form.brandThemeId === '' ? 'var(--brand-primary-light, #EEF2FF)' : 'white',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        <div style={{ width: 72, height: 22, borderRadius: 999, marginBottom: 10, background: 'linear-gradient(90deg, #E2E8F0 0%, var(--brand-primary, #3B6FE8) 100%)' }} />
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>Custom color</div>
+                        <div style={{ marginTop: 4, fontSize: 12, lineHeight: 1.5, color: '#6B7280' }}>
+                          Use a custom hex value if none of the presets fit the business.
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
                   <label style={{ display: 'block' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 8 }}>
-                      Brand color
+                      Custom brand color
                     </div>
                     <div style={{ position: 'relative' }}>
                       <Palette size={15} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
@@ -363,6 +474,7 @@ export default function Settings() {
                         value={form.brandColor}
                         onChange={(e) => setForm((prev) => ({ ...prev, brandColor: e.target.value }))}
                         placeholder="#2E5ED4"
+                        disabled={Boolean(selectedTheme)}
                         style={{
                           width: '100%',
                           border: '1px solid #D7DCE8',
@@ -373,8 +485,15 @@ export default function Settings() {
                           fontFamily: 'inherit',
                           outline: 'none',
                           boxSizing: 'border-box',
+                          background: selectedTheme ? '#F8FAFC' : 'white',
+                          cursor: selectedTheme ? 'not-allowed' : 'text',
                         }}
                       />
+                    </div>
+                    <div style={{ marginTop: 8, fontSize: 12, lineHeight: 1.5, color: '#9CA3AF' }}>
+                      {selectedTheme
+                        ? `${selectedTheme.name} sets the accent color automatically. Switch to Custom color to enter a hex code.`
+                        : 'Use a hex value like #2E5ED4 for a fully custom accent.'}
                     </div>
                   </label>
 
@@ -403,6 +522,7 @@ export default function Settings() {
                       />
                     </div>
                   </label>
+                </div>
                 </div>
 
                 <label style={{ display: 'block', marginTop: 14 }}>
@@ -519,7 +639,7 @@ export default function Settings() {
                 background: '#FCFCFD',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-                  <BellRing size={18} color="#3B6FE8" />
+                  <BellRing size={18} color="var(--brand-primary, #3B6FE8)" />
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>Automation</div>
                     <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 3 }}>
@@ -552,7 +672,7 @@ export default function Settings() {
                       height: 30,
                       borderRadius: 9999,
                       border: 'none',
-                      background: form.autoFollowupEnabled ? '#3B6FE8' : '#D1D5DB',
+                      background: form.autoFollowupEnabled ? 'var(--brand-primary, #3B6FE8)' : '#D1D5DB',
                       padding: 4,
                       cursor: 'pointer',
                       display: 'flex',
@@ -615,7 +735,7 @@ export default function Settings() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 8,
-                    background: !hasChanges || !trimmedBusinessName || saving || loading ? '#BFDBFE' : '#3B6FE8',
+                    background: !hasChanges || !trimmedBusinessName || saving || loading ? '#BFDBFE' : 'var(--brand-primary, #3B6FE8)',
                     color: 'white',
                     border: 'none',
                     borderRadius: 10,
@@ -666,11 +786,11 @@ export default function Settings() {
                     width: 34,
                     height: 34,
                     borderRadius: 10,
-                    background: '#EEF2FF',
+                    background: 'var(--brand-primary-light, #EEF2FF)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#3B6FE8',
+                    color: 'var(--brand-primary, #3B6FE8)',
                   }}>
                     <Palette size={16} />
                   </div>
@@ -760,11 +880,11 @@ export default function Settings() {
                     width: 34,
                     height: 34,
                     borderRadius: 10,
-                    background: '#EEF2FF',
+                    background: 'var(--brand-primary-light, #EEF2FF)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#3B6FE8',
+                    color: 'var(--brand-primary, #3B6FE8)',
                   }}>
                     <QrCode size={16} />
                   </div>
@@ -806,8 +926,8 @@ export default function Settings() {
                       gap: 8,
                       padding: '10px 12px',
                       borderRadius: 10,
-                      background: '#EEF2FF',
-                      color: '#2E5ED4',
+                      background: 'var(--brand-primary-light, #EEF2FF)',
+                      color: 'var(--brand-primary, #2E5ED4)',
                       textDecoration: 'none',
                       fontSize: 13,
                       fontWeight: 700,

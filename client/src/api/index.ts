@@ -46,6 +46,7 @@ export async function updatePreparerSettings(
   preparerId: string,
   payload: {
     businessName: string;
+    brandThemeId: string;
     brandColor: string;
     brandTagline: string;
     brandLogoUrl: string;

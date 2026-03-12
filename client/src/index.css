@@ -249,6 +249,53 @@ body {
   }
 }
 
+@media (max-width: 1180px) {
+  .client-profile-grid {
+    grid-template-columns: 1fr !important;
+    overflow: auto !important;
+  }
+
+  .client-profile-thread {
+    min-height: 520px;
+  }
+
+  .client-profile-sidebar-column {
+    overflow: visible !important;
+    padding-right: 0 !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .client-profile-page {
+    margin-left: 0 !important;
+    padding: 16px !important;
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+  }
+
+  .client-profile-hero-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    min-width: 0 !important;
+    width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  .client-profile-shell {
+    gap: 16px !important;
+    height: auto !important;
+  }
+
+  .client-profile-hero {
+    gap: 16px !important;
+  }
+
+  .client-profile-hero-stats {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .overview-field:focus {
   border-color: #21449C !important;
   box-shadow: 0 0 0 4px rgba(59, 111, 232, 0.12);

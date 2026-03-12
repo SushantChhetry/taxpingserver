@@ -39,6 +39,7 @@ const preparer: Preparer = {
   name: 'Alice',
   email: 'alice@example.com',
   business_name: 'Alice Tax Co',
+  brand_theme_id: 'classic-blue',
   brand_color: '#1D4ED8',
   brand_tagline: 'Fast, modern tax prep',
   brand_logo_url: 'https://example.com/logo.png',
@@ -124,6 +125,7 @@ describe('getPreparerSettings', () => {
       name: preparer.name,
       email: preparer.email,
       business_name: preparer.business_name,
+      brand_theme_id: preparer.brand_theme_id,
       brand_color: preparer.brand_color,
       brand_tagline: preparer.brand_tagline,
       brand_logo_url: preparer.brand_logo_url,
@@ -155,6 +157,7 @@ describe('updatePreparerSettings', () => {
       name: preparer.name,
       email: preparer.email,
       business_name: 'North Star Tax',
+      brand_theme_id: 'coastal-teal',
       brand_color: '#0F766E',
       brand_tagline: 'Calm filing for busy founders',
       brand_logo_url: 'https://example.com/north-star.png',
@@ -172,6 +175,7 @@ describe('updatePreparerSettings', () => {
 
     const result = await updatePreparerSettings(preparer.id, {
       businessName: 'North Star Tax',
+      brandThemeId: 'coastal-teal',
       brandColor: '#0F766E',
       brandTagline: 'Calm filing for busy founders',
       brandLogoUrl: 'https://example.com/north-star.png',
@@ -187,17 +191,19 @@ describe('updatePreparerSettings', () => {
     const [updateSql, updateParams] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(updateSql).toContain('UPDATE preparers');
     expect(updateSql).toContain('business_name = $2');
-    expect(updateSql).toContain('brand_color = $3');
-    expect(updateSql).toContain('brand_tagline = $4');
-    expect(updateSql).toContain('brand_logo_url = $5');
-    expect(updateSql).toContain('website_url = $6');
-    expect(updateSql).toContain('instagram_url = $7');
-    expect(updateSql).toContain('linkedin_url = $8');
-    expect(updateSql).toContain('auto_followup_enabled = $9');
-    expect(updateSql).toContain('auto_followup_hours = $10');
+    expect(updateSql).toContain('brand_theme_id = $3');
+    expect(updateSql).toContain('brand_color = $4');
+    expect(updateSql).toContain('brand_tagline = $5');
+    expect(updateSql).toContain('brand_logo_url = $6');
+    expect(updateSql).toContain('website_url = $7');
+    expect(updateSql).toContain('instagram_url = $8');
+    expect(updateSql).toContain('linkedin_url = $9');
+    expect(updateSql).toContain('auto_followup_enabled = $10');
+    expect(updateSql).toContain('auto_followup_hours = $11');
     expect(updateParams).toEqual([
       preparer.id,
       'North Star Tax',
+      'coastal-teal',
       '#0F766E',
       'Calm filing for busy founders',
       'https://example.com/north-star.png',

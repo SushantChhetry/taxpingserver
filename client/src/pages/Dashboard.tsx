@@ -18,6 +18,7 @@ import StatusBadge from '../components/StatusBadge';
 import AddClientModal from '../components/AddClientModal';
 import SkeletonRow from '../components/SkeletonRow';
 import { ToastContainer, toast } from '../components/Toast';
+import { getBrandThemeStyle, resolveBrandTheme } from '../utils/brandThemes';
 
 const TABLE_COLUMNS =
   'minmax(232px, 2.35fr) minmax(116px, 0.95fr) minmax(88px, 0.72fr) minmax(208px, 1.45fr) minmax(122px, 0.95fr) minmax(220px, 1.45fr)';
@@ -121,7 +122,7 @@ function ActionButton({
           ...commonStyle,
           border: '1px solid #D7E1F1',
           background: muted ? '#F9FAFB' : '#F8FAFF',
-          color: muted ? '#9CA3AF' : '#21449C',
+          color: muted ? '#9CA3AF' : 'var(--brand-primary-dark, #21449C)',
           textDecoration: 'none',
           pointerEvents: muted ? 'none' : 'auto',
         }}
@@ -141,8 +142,8 @@ function ActionButton({
       style={{
         ...commonStyle,
         border: primary ? 'none' : '1px solid #D7E1F1',
-        background: primary ? '#21449C' : muted ? '#F9FAFB' : 'white',
-        color: primary ? 'white' : muted ? '#9CA3AF' : '#21449C',
+        background: primary ? 'var(--brand-primary-dark, #21449C)' : muted ? '#F9FAFB' : 'white',
+        color: primary ? 'white' : muted ? '#9CA3AF' : 'var(--brand-primary-dark, #21449C)',
         cursor: loading || muted ? 'default' : 'pointer',
         opacity: loading ? 0.72 : 1,
       }}
@@ -187,8 +188,8 @@ function ClientRow({ client, preparerId, onSendRequest, onSendReminder, actionLo
             width: 42,
             height: 42,
             borderRadius: '50%',
-            background: '#EEF2FF',
-            color: '#3B6FE8',
+            background: 'var(--brand-primary-light, #EEF2FF)',
+            color: 'var(--brand-primary, #3B6FE8)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -226,9 +227,9 @@ function ClientRow({ client, preparerId, onSendRequest, onSendReminder, actionLo
                 style={{
                   fontSize: 10,
                   fontWeight: 700,
-                  color: '#7C3AED',
-                  background: '#F5EEFF',
-                  border: '1px solid #DDD6FE',
+                  color: 'var(--brand-primary, #7C3AED)',
+                  background: 'var(--brand-primary-light, #F5EEFF)',
+                  border: '1px solid var(--brand-primary-border, #DDD6FE)',
                   borderRadius: 999,
                   padding: '2px 8px',
                   flexShrink: 0,
@@ -267,9 +268,9 @@ function ClientRow({ client, preparerId, onSendRequest, onSendReminder, actionLo
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              background: status === 'complete' ? '#F0FDF4' : '#F5F8FF',
-              color: status === 'complete' ? '#15803D' : '#21449C',
-              border: `1px solid ${status === 'complete' ? '#BBF7D0' : '#DCE7FF'}`,
+              background: status === 'complete' ? '#F0FDF4' : 'var(--brand-primary-surface, #F5F8FF)',
+              color: status === 'complete' ? '#15803D' : 'var(--brand-primary-dark, #21449C)',
+              border: `1px solid ${status === 'complete' ? '#BBF7D0' : 'var(--brand-primary-border, #DCE7FF)'}`,
               borderRadius: 999,
               fontSize: 12,
               fontWeight: 600,
@@ -498,7 +499,14 @@ export default function Dashboard() {
   const visibleLiveCount = filteredClients.length;
 
   const { stats } = data ?? { stats: { total: 0, waiting: 0, complete: 0, issues: 0 } };
-  const preparer = data?.preparer ?? { id: '', name: '', email: '', businessName: '' };
+  const preparer = data?.preparer ?? {
+    id: '',
+    name: '',
+    email: '',
+    businessName: '',
+    branding: { themeId: null, color: null },
+  };
+  const brandTheme = resolveBrandTheme(preparer.branding);
   const workspaceName = preparer.businessName || preparer.name || 'your practice';
   const unstartedCount = clients.filter((client) => client.status === 'not_started').length;
   const visibleCountLabel = loading
@@ -515,7 +523,7 @@ export default function Dashboard() {
     taxYearFilter !== 'all',
   ].filter(Boolean).length;
   const summaryItems = [
-    { label: 'Open files', value: activeCount, background: '#F5F8FF', border: '#DCE7FF', color: '#21449C' },
+    { label: 'Open files', value: activeCount, background: 'var(--brand-primary-surface, #F5F8FF)', border: 'var(--brand-primary-border, #DCE7FF)', color: 'var(--brand-primary-dark, #21449C)' },
     { label: 'Waiting on docs', value: waitingOnDocsCount, background: '#FFF8F0', border: '#F8D8AD', color: '#B45309' },
     { label: 'Completed', value: stats.complete, background: '#F3FCF5', border: '#CDEDD5', color: '#1D7A46' },
     { label: 'Need first touch', value: unstartedCount, background: '#FBF7FF', border: '#E9D9FE', color: '#7C3AED' },
@@ -569,7 +577,7 @@ export default function Dashboard() {
             style={{
               marginTop: 18,
               border: 'none',
-              background: '#21449C',
+              background: 'var(--brand-primary-dark, #21449C)',
               color: 'white',
               borderRadius: 14,
               padding: '11px 16px',
@@ -587,7 +595,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#F7F8FC' }}>
+    <div style={{ ...getBrandThemeStyle(brandTheme), display: 'flex', minHeight: '100vh', background: '#F7F8FC' }}>
       <Sidebar
         preparerId={preparerId ?? ''}
         preparerName={preparer.name}
@@ -611,7 +619,7 @@ export default function Dashboard() {
             <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
               <div className="dashboard-header-copy" style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: '#132450' }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--brand-primary-dark, #132450)' }}>
                     Clients
                   </div>
                   <span
@@ -623,8 +631,8 @@ export default function Dashboard() {
                       height: 26,
                       padding: '0 10px',
                       borderRadius: 999,
-                      background: '#EEF2FF',
-                      color: '#21449C',
+                      background: 'var(--brand-primary-light, #EEF2FF)',
+                      color: 'var(--brand-primary-dark, #21449C)',
                       fontSize: 12,
                       fontWeight: 700,
                     }}
@@ -683,7 +691,7 @@ export default function Dashboard() {
                     gap: 8,
                     height: 44,
                     border: 'none',
-                    background: '#21449C',
+                    background: 'var(--brand-primary-dark, #21449C)',
                     color: 'white',
                     borderRadius: 14,
                     padding: '0 16px',
@@ -755,9 +763,9 @@ export default function Dashboard() {
                       className="overview-button dashboard-filter-reset"
                       onClick={clearFilters}
                       style={{
-                        border: '1px solid #D7E1F1',
+                        border: '1px solid var(--brand-primary-border, #D7E1F1)',
                         background: 'white',
-                        color: '#21449C',
+                        color: 'var(--brand-primary-dark, #21449C)',
                         borderRadius: 12,
                         padding: '8px 12px',
                         fontFamily: 'inherit',
@@ -788,9 +796,9 @@ export default function Dashboard() {
                           minHeight: 42,
                           padding: '8px 12px',
                           borderRadius: 14,
-                          border: `1px solid ${selected ? '#B7CBFF' : '#DCE5F4'}`,
-                          background: selected ? '#EAF1FF' : 'white',
-                          color: selected ? '#173C8A' : '#44516C',
+                          border: `1px solid ${selected ? 'var(--brand-primary-border, #B7CBFF)' : '#DCE5F4'}`,
+                          background: selected ? 'var(--brand-primary-light, #EAF1FF)' : 'white',
+                          color: selected ? 'var(--brand-primary-dark, #173C8A)' : '#44516C',
                           cursor: 'pointer',
                           fontFamily: 'inherit',
                         }}
@@ -805,7 +813,7 @@ export default function Dashboard() {
                             height: 24,
                             padding: '0 8px',
                             borderRadius: 999,
-                            background: selected ? '#21449C' : '#F2F5FB',
+                            background: selected ? 'var(--brand-primary-dark, #21449C)' : '#F2F5FB',
                             color: selected ? 'white' : '#6B7280',
                             fontSize: 11,
                             fontWeight: 700,
@@ -891,7 +899,7 @@ export default function Dashboard() {
 
               <div className="dashboard-list-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#132450' }}>Client list</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-primary-dark, #132450)' }}>Client list</div>
                   <span
                     style={{
                       display: 'inline-flex',
@@ -901,8 +909,8 @@ export default function Dashboard() {
                       height: 24,
                       padding: '0 8px',
                       borderRadius: 999,
-                      background: '#EEF2FF',
-                      color: '#21449C',
+                      background: 'var(--brand-primary-light, #EEF2FF)',
+                      color: 'var(--brand-primary-dark, #21449C)',
                       fontSize: 11,
                       fontWeight: 700,
                     }}
@@ -977,8 +985,8 @@ export default function Dashboard() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          background: '#EEF2FF',
-                          color: '#21449C',
+                          background: 'var(--brand-primary-light, #EEF2FF)',
+                          color: 'var(--brand-primary-dark, #21449C)',
                         }}
                       >
                         <Users size={28} />
@@ -998,9 +1006,9 @@ export default function Dashboard() {
                           onClick={clearFilters}
                           style={{
                             marginTop: 18,
-                            border: '1px solid #D7E1F1',
+                            border: '1px solid var(--brand-primary-border, #D7E1F1)',
                             background: 'white',
-                            color: '#21449C',
+                            color: 'var(--brand-primary-dark, #21449C)',
                             borderRadius: 14,
                             padding: '11px 16px',
                             fontFamily: 'inherit',
@@ -1019,7 +1027,7 @@ export default function Dashboard() {
                           style={{
                             marginTop: 18,
                             border: 'none',
-                            background: '#21449C',
+                            background: 'var(--brand-primary-dark, #21449C)',
                             color: 'white',
                             borderRadius: 14,
                             padding: '11px 16px',

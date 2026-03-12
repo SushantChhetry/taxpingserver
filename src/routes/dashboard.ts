@@ -15,6 +15,7 @@ import {
   type ClientDashboardRow,
   type DashboardData,
 } from '../db/queries';
+import { getBrandThemePrimaryColor, normalizeBrandThemeId } from '../utils/brandThemes';
 import { sendSMS } from '../webhook/sender';
 import { formatMobile } from '../utils/phone';
 
@@ -566,6 +567,7 @@ function mapPreparerSettingsResponse(data: Awaited<ReturnType<typeof getPreparer
       twilioNumber: data.twilio_number,
       driveConnected: Boolean(data.drive_folder_id),
       branding: {
+        themeId: data.brand_theme_id,
         color: data.brand_color,
         tagline: data.brand_tagline,
         logoUrl: data.brand_logo_url,
@@ -598,6 +600,7 @@ async function handleUpdatePreparerSettings(
   try {
     const {
       businessName,
+      brandThemeId,
       brandColor,
       brandTagline,
       brandLogoUrl,
@@ -608,6 +611,7 @@ async function handleUpdatePreparerSettings(
       autoFollowupHours,
     } = req.body as {
       businessName?: string;
+      brandThemeId?: string;
       brandColor?: string;
       brandTagline?: string;
       brandLogoUrl?: string;
@@ -633,7 +637,14 @@ async function handleUpdatePreparerSettings(
       return;
     }
 
-    const normalizedBrandColor = normalizeBrandColor(brandColor);
+    const normalizedBrandThemeId = normalizeBrandThemeId(brandThemeId);
+    if (brandThemeId !== undefined && brandThemeId !== '' && !normalizedBrandThemeId) {
+      res.status(400).json({ error: 'brandThemeId must be one of the supported theme ids' });
+      return;
+    }
+
+    const normalizedBrandColor = normalizeBrandColor(brandColor)
+      ?? (normalizedBrandThemeId ? getBrandThemePrimaryColor(normalizedBrandThemeId) : null);
     if (brandColor !== undefined && brandColor !== '' && !normalizedBrandColor) {
       res.status(400).json({ error: 'brandColor must be a hex color like #2E5ED4' });
       return;
@@ -667,6 +678,7 @@ async function handleUpdatePreparerSettings(
 
     const updated = await updatePreparerSettings(req.params.preparerId, {
       businessName: businessName.trim(),
+      brandThemeId: normalizedBrandThemeId,
       brandColor: normalizedBrandColor,
       brandTagline: normalizeOptionalText(brandTagline),
       brandLogoUrl: normalizedLogoUrl,
@@ -734,6 +746,10 @@ async function handleGetDashboardJson(
         name: preparer.name,
         email: preparer.email,
         businessName: preparer.business_name ?? preparer.name,
+        branding: {
+          themeId: preparer.brand_theme_id,
+          color: preparer.brand_color,
+        },
       },
       clients,
       stats,

@@ -9,6 +9,7 @@ import Season from './pages/Season';
 import PublicQr from './pages/PublicQr';
 import PublicSignup from './pages/PublicSignup';
 import PublicLaunch from './pages/PublicLaunch';
+import DashboardThemeProvider from './components/DashboardThemeProvider';
 
 const PILOT_PREPARER_ID = 'feb93713-91a6-474f-8d56-cebdd606ebff';
 
@@ -136,27 +137,29 @@ function AppMetadata() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppMetadata />
-      <Routes>
-        <Route path="/" element={<Navigate to={`/dashboard/${PILOT_PREPARER_ID}/overview`} replace />} />
-        <Route path="/dashboard/:preparerId/overview" element={<Overview />} />
-        <Route
-          path="/dashboard/:preparerId"
-          element={
-            <Suspense fallback={<LoadingRoute label="Loading dashboard…" />}>
-              <Dashboard />
-            </Suspense>
-          }
-        />
-        <Route path="/dashboard/:preparerId/client/:clientId" element={<ClientProfile />} />
-        <Route path="/dashboard/:preparerId/settings" element={<Settings />} />
-        <Route path="/dashboard/:preparerId/help" element={<Help />} />
-        <Route path="/dashboard/:preparerId/messages" element={<Messages />} />
-        <Route path="/dashboard/:preparerId/season" element={<Season />} />
-        <Route path="/public/:preparerId/qr" element={<PublicQr />} />
-        <Route path="/public/:preparerId/signup" element={<PublicSignup />} />
-        <Route path="/public/:preparerId/connect" element={<PublicLaunch />} />
-      </Routes>
+      <DashboardThemeProvider>
+        <AppMetadata />
+        <Routes>
+          <Route path="/" element={<Navigate to={`/dashboard/${PILOT_PREPARER_ID}/overview`} replace />} />
+          <Route path="/dashboard/:preparerId/overview" element={<Overview />} />
+          <Route
+            path="/dashboard/:preparerId"
+            element={
+              <Suspense fallback={<LoadingRoute label="Loading dashboard…" />}>
+                <Dashboard />
+              </Suspense>
+            }
+          />
+          <Route path="/dashboard/:preparerId/client/:clientId" element={<ClientProfile />} />
+          <Route path="/dashboard/:preparerId/settings" element={<Settings />} />
+          <Route path="/dashboard/:preparerId/help" element={<Help />} />
+          <Route path="/dashboard/:preparerId/messages" element={<Messages />} />
+          <Route path="/dashboard/:preparerId/season" element={<Season />} />
+          <Route path="/public/:preparerId/qr" element={<PublicQr />} />
+          <Route path="/public/:preparerId/signup" element={<PublicSignup />} />
+          <Route path="/public/:preparerId/connect" element={<PublicLaunch />} />
+        </Routes>
+      </DashboardThemeProvider>
     </BrowserRouter>
   );
 }

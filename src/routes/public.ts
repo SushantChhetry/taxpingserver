@@ -14,6 +14,7 @@ function mapPublicPreparerResponse(preparer: Awaited<ReturnType<typeof getPublic
       twilioNumber: preparer.twilio_number,
       taxYear: DEFAULT_TAX_YEAR,
       branding: {
+        themeId: preparer.brand_theme_id,
         color: preparer.brand_color,
         tagline: preparer.brand_tagline,
         logoUrl: preparer.brand_logo_url,

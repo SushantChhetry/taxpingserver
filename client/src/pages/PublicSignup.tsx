@@ -70,6 +70,7 @@ export default function PublicSignup() {
     'Simple tax document collection that still feels personal.';
   const brandLinks = getBrandLinks(
     data?.preparer.branding ?? {
+      themeId: null,
       color: null,
       tagline: null,
       logoUrl: null,

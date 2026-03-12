@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS preparers (
   drive_tokens JSONB,
   drive_folder_id TEXT,
   business_name TEXT,
+  brand_theme_id TEXT,
   brand_color TEXT,
   brand_tagline TEXT,
   brand_logo_url TEXT,
@@ -70,6 +71,7 @@ CREATE TABLE IF NOT EXISTS dead_letter_queue (
 ALTER TABLE preparers
   ADD COLUMN IF NOT EXISTS drive_tokens JSONB,
   ADD COLUMN IF NOT EXISTS business_name TEXT,
+  ADD COLUMN IF NOT EXISTS brand_theme_id TEXT,
   ADD COLUMN IF NOT EXISTS brand_color TEXT,
   ADD COLUMN IF NOT EXISTS brand_tagline TEXT,
   ADD COLUMN IF NOT EXISTS brand_logo_url TEXT,

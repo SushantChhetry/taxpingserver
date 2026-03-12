@@ -40,7 +40,13 @@ export default function Season() {
       .finally(() => setLoading(false));
   }, [preparerId]);
 
-  const preparer = data?.preparer ?? { id: preparerId ?? '', name: '', email: '', businessName: '' };
+  const preparer = data?.preparer ?? {
+    id: preparerId ?? '',
+    name: '',
+    email: '',
+    businessName: '',
+    branding: { themeId: null, color: null },
+  };
   const clients = data?.clients ?? [];
   const years = [...new Set(clients.map((client) => client.taxYear).filter((year): year is number => typeof year === 'number'))]
     .sort((left, right) => right - left);
@@ -99,10 +105,10 @@ export default function Season() {
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: '#132450' }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--brand-primary-dark, #132450)' }}>
                     Season
                   </div>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 34, height: 26, padding: '0 10px', borderRadius: 999, background: '#EEF2FF', color: '#21449C', fontSize: 12, fontWeight: 700 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 34, height: 26, padding: '0 10px', borderRadius: 999, background: 'var(--brand-primary-light, #EEF2FF)', color: 'var(--brand-primary-dark, #21449C)', fontSize: 12, fontWeight: 700 }}>
                     {loading ? '—' : seasonClients.length}
                   </span>
                 </div>
@@ -132,10 +138,10 @@ export default function Season() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginTop: 18 }}>
               {[
-                { label: 'Open files', value: openCount, tone: '#21449C', bg: '#F5F8FF', border: '#DCE7FF', icon: <Files size={16} /> },
+                { label: 'Open files', value: openCount, tone: 'var(--brand-primary-dark, #21449C)', bg: 'var(--brand-primary-surface, #F5F8FF)', border: 'var(--brand-primary-border, #DCE7FF)', icon: <Files size={16} /> },
                 { label: 'Completed', value: completeCount, tone: '#1D7A46', bg: '#F3FCF5', border: '#CDEDD5', icon: <CheckCircle2 size={16} /> },
                 { label: 'Pending docs', value: pendingDocsCount, tone: '#B45309', bg: '#FFF8F0', border: '#F8D8AD', icon: <Clock3 size={16} /> },
-                { label: 'Tax years active', value: groupedYears.length, tone: '#7C3AED', bg: '#FBF7FF', border: '#E9D9FE', icon: <CalendarRange size={16} /> },
+                { label: 'Tax years active', value: groupedYears.length, tone: 'var(--brand-primary, #7C3AED)', bg: 'var(--brand-primary-light, #FBF7FF)', border: 'var(--brand-primary-border, #E9D9FE)', icon: <CalendarRange size={16} /> },
               ].map((item) => (
                 <div key={item.label} style={{ display: 'grid', gap: 8, padding: '14px 16px', borderRadius: 18, border: `1px solid ${item.border}`, background: item.bg }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -156,7 +162,7 @@ export default function Season() {
 
           <section style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.92fr) minmax(0, 1.08fr)', gap: 20 }}>
             <div style={{ background: 'white', borderRadius: 24, border: '1px solid #E2E6F0', padding: 20, boxShadow: '0 18px 42px rgba(19, 36, 80, 0.06)' }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#132450' }}>Year breakdown</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--brand-primary-dark, #132450)' }}>Year breakdown</div>
               <div style={{ marginTop: 6, fontSize: 13, lineHeight: 1.6, color: '#6B7280' }}>
                 Compare open files, completed returns, and pending document load across seasons.
               </div>
@@ -182,22 +188,22 @@ export default function Season() {
                         key={year}
                         type="button"
                         onClick={() => setSelectedYear(selected ? 'all' : year)}
-                        style={{ textAlign: 'left', border: `1px solid ${selected ? '#B7CBFF' : '#E5EBF4'}`, background: selected ? '#F5F8FF' : 'white', borderRadius: 20, padding: '16px 18px', cursor: 'pointer', fontFamily: 'inherit' }}
+                        style={{ textAlign: 'left', border: `1px solid ${selected ? 'var(--brand-primary-border, #B7CBFF)' : '#E5EBF4'}`, background: selected ? 'var(--brand-primary-surface, #F5F8FF)' : 'white', borderRadius: 20, padding: '16px 18px', cursor: 'pointer', fontFamily: 'inherit' }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div>
-                            <div style={{ fontSize: 18, fontWeight: 700, color: '#132450' }}>{year}</div>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--brand-primary-dark, #132450)' }}>{year}</div>
                             <div style={{ marginTop: 4, fontSize: 12, color: '#6B7280' }}>
                               {yearClients.length} client{yearClients.length === 1 ? '' : 's'}
                             </div>
                           </div>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 30, height: 24, padding: '0 8px', borderRadius: 999, background: selected ? '#21449C' : '#EEF2FF', color: selected ? 'white' : '#21449C', fontSize: 11, fontWeight: 700 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 30, height: 24, padding: '0 8px', borderRadius: 999, background: selected ? 'var(--brand-primary-dark, #21449C)' : 'var(--brand-primary-light, #EEF2FF)', color: selected ? 'white' : 'var(--brand-primary-dark, #21449C)', fontSize: 11, fontWeight: 700 }}>
                             {selected ? 'On' : 'View'}
                           </span>
                         </div>
                         <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
                           {[
-                            { label: 'Open', value: yearOpen, color: '#21449C' },
+                            { label: 'Open', value: yearOpen, color: 'var(--brand-primary-dark, #21449C)' },
                             { label: 'Done', value: yearComplete, color: '#1D7A46' },
                             { label: 'Pending', value: yearPending, color: '#B45309' },
                           ].map((item) => (
@@ -221,7 +227,7 @@ export default function Season() {
             <div style={{ background: 'white', borderRadius: 24, border: '1px solid #E2E6F0', padding: 20, boxShadow: '0 18px 42px rgba(19, 36, 80, 0.06)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#132450' }}>Ready to review</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--brand-primary-dark, #132450)' }}>Ready to review</div>
                   <div style={{ marginTop: 6, fontSize: 13, lineHeight: 1.6, color: '#6B7280' }}>
                     Files with uploaded docs and no outstanding document requests.
                   </div>
@@ -248,7 +254,7 @@ export default function Season() {
                       style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 16, alignItems: 'center', padding: '16px 18px', borderRadius: 20, border: '1px solid #E5EBF4', background: 'white', textDecoration: 'none', color: 'inherit' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                        <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#EEF2FF', color: '#3B6FE8', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                        <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--brand-primary-light, #EEF2FF)', color: 'var(--brand-primary, #3B6FE8)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                           {getInitials(client.name)}
                         </div>
                         <div style={{ minWidth: 0 }}>
@@ -261,7 +267,7 @@ export default function Season() {
                           </div>
                         </div>
                       </div>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#21449C', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--brand-primary-dark, #21449C)', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
                         Open file
                         <ArrowRight size={15} />
                       </div>

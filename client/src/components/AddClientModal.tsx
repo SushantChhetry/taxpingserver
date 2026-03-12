@@ -118,7 +118,7 @@ export default function AddClientModal({ preparerId, onClose, onSuccess }: Props
                 placeholder="Jane Smith"
                 required
                 style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = '#3B6FE8')}
+                onFocus={(e) => (e.target.style.borderColor = 'var(--brand-primary, #3B6FE8)')}
                 onBlur={(e) => (e.target.style.borderColor = '#E2E6F0')}
               />
             </div>
@@ -137,7 +137,7 @@ export default function AddClientModal({ preparerId, onClose, onSuccess }: Props
                 inputMode="numeric"
                 maxLength={14}
                 style={{ ...inputStyle, borderColor: mobileError ? '#EF4444' : '#E2E6F0' }}
-                onFocus={(e) => (e.target.style.borderColor = mobileError ? '#EF4444' : '#3B6FE8')}
+                onFocus={(e) => (e.target.style.borderColor = mobileError ? '#EF4444' : 'var(--brand-primary, #3B6FE8)')}
                 onBlur={(e) => (e.target.style.borderColor = mobileError ? '#EF4444' : '#E2E6F0')}
               />
             </div>
@@ -159,7 +159,7 @@ export default function AddClientModal({ preparerId, onClose, onSuccess }: Props
                 backgroundPosition: 'right 12px center',
                 cursor: 'pointer',
               }}
-              onFocus={(e) => (e.target.style.borderColor = '#3B6FE8')}
+              onFocus={(e) => (e.target.style.borderColor = 'var(--brand-primary, #3B6FE8)')}
               onBlur={(e) => (e.target.style.borderColor = '#E2E6F0')}
             >
               {TAX_YEAR_OPTIONS.map((year) => (
@@ -185,14 +185,14 @@ export default function AddClientModal({ preparerId, onClose, onSuccess }: Props
               type="submit"
               disabled={!canSubmit}
               style={{
-                background: canSubmit ? '#3B6FE8' : '#3B6FE8',
+                background: canSubmit ? 'var(--brand-primary, #3B6FE8)' : 'var(--brand-primary, #3B6FE8)',
                 opacity: canSubmit ? 1 : 0.4,
                 color: 'white', padding: '8px 16px', borderRadius: 6,
                 fontSize: 13, fontWeight: 600, cursor: canSubmit ? 'pointer' : 'not-allowed',
                 border: 'none', fontFamily: 'inherit',
               }}
-              onMouseEnter={(e) => { if (canSubmit) e.currentTarget.style.background = '#2E5ED4'; }}
-              onMouseLeave={(e) => { if (canSubmit) e.currentTarget.style.background = '#3B6FE8'; }}
+              onMouseEnter={(e) => { if (canSubmit) e.currentTarget.style.background = 'var(--brand-primary-dark, #2E5ED4)'; }}
+              onMouseLeave={(e) => { if (canSubmit) e.currentTarget.style.background = 'var(--brand-primary, #3B6FE8)'; }}
             >
               {loading ? 'Adding...' : 'Add Client'}
             </button>
