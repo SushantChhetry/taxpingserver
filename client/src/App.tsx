@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Suspense, lazy, useEffect } from 'react';
 import ClientProfile from './pages/ClientProfile';
 import Overview from './pages/Overview';
 import Settings from './pages/Settings';
@@ -71,9 +71,72 @@ const Dashboard = lazy(async () => {
   }
 });
 
+const DEFAULT_TITLE = 'TaxPing Dashboard';
+const DEFAULT_DESCRIPTION = 'TaxPing helps tax preparers track client document collection, follow-ups, and seasonal workflow in one dashboard.';
+
+function updateMetaDescription(content: string) {
+  let element = document.querySelector('meta[name="description"]');
+
+  if (!element) {
+    element = document.createElement('meta');
+    element.setAttribute('name', 'description');
+    document.head.appendChild(element);
+  }
+
+  element.setAttribute('content', content);
+}
+
+function AppMetadata() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    let title = DEFAULT_TITLE;
+    let description = DEFAULT_DESCRIPTION;
+
+    if (/^\/dashboard\/[^/]+\/overview\/?$/.test(path)) {
+      title = 'Overview | TaxPing Dashboard';
+      description = 'View client workflow, response status, and the next actions for your TaxPing workspace.';
+    } else if (/^\/dashboard\/[^/]+\/client\/[^/]+\/?$/.test(path)) {
+      title = 'Client Profile | TaxPing Dashboard';
+      description = 'Review one client record, message history, and document progress inside TaxPing.';
+    } else if (/^\/dashboard\/[^/]+\/settings\/?$/.test(path)) {
+      title = 'Settings | TaxPing Dashboard';
+      description = 'Manage branding, reminder timing, and workspace preferences for your TaxPing dashboard.';
+    } else if (/^\/dashboard\/[^/]+\/help\/?$/.test(path)) {
+      title = 'Help | TaxPing Dashboard';
+      description = 'Open the TaxPing workflow guide, setup instructions, and key dashboard actions.';
+    } else if (/^\/dashboard\/[^/]+\/messages\/?$/.test(path)) {
+      title = 'Messages | TaxPing Dashboard';
+      description = 'Monitor client conversations and stay on top of document collection with TaxPing.';
+    } else if (/^\/dashboard\/[^/]+\/season\/?$/.test(path)) {
+      title = 'Season View | TaxPing Dashboard';
+      description = 'Track seasonal tax prep activity, deadlines, and workspace momentum in TaxPing.';
+    } else if (/^\/dashboard\/[^/]+\/?$/.test(path)) {
+      title = 'Dashboard | TaxPing';
+      description = 'Manage clients, requests, reminders, and document collection from the TaxPing dashboard.';
+    } else if (/^\/public\/[^/]+\/qr\/?$/.test(path)) {
+      title = 'Client QR Access | TaxPing';
+      description = 'Share a simple QR entry point so clients can start their TaxPing document handoff quickly.';
+    } else if (/^\/public\/[^/]+\/signup\/?$/.test(path)) {
+      title = 'Client Signup | TaxPing';
+      description = 'Collect a client name and phone number, then move them into the TaxPing messaging workflow.';
+    } else if (/^\/public\/[^/]+\/connect\/?$/.test(path)) {
+      title = 'Connect | TaxPing';
+      description = 'Launch the client handoff experience and connect the conversation back into TaxPing.';
+    }
+
+    document.title = title;
+    updateMetaDescription(description);
+  }, [location.pathname]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
+      <AppMetadata />
       <Routes>
         <Route path="/" element={<Navigate to={`/dashboard/${PILOT_PREPARER_ID}/overview`} replace />} />
         <Route path="/dashboard/:preparerId/overview" element={<Overview />} />
