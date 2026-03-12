@@ -1,37 +1,57 @@
+import type { CSSProperties } from 'react';
+
+const TABLE_COLUMNS =
+  'minmax(232px, 2.35fr) minmax(116px, 0.95fr) minmax(88px, 0.72fr) minmax(208px, 1.45fr) minmax(122px, 0.95fr) minmax(220px, 1.45fr)';
+
 export default function SkeletonRow() {
-  const pulse: React.CSSProperties = {
-    background: '#F7F8FC',
-    borderRadius: 4,
-    animation: 'pulse 1.5s ease-in-out infinite',
+  const pulse: CSSProperties = {
+    background: 'linear-gradient(90deg, #F4F7FC 0%, #EAF0F9 50%, #F4F7FC 100%)',
+    backgroundSize: '200% 100%',
+    borderRadius: 999,
+    animation: 'dashboardPulse 1.4s ease-in-out infinite',
   };
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', padding: '0 24px', height: 52, borderBottom: '1px solid #F3F4F6', gap: 0 }}>
-      {/* CLIENT col flex 2.5 */}
-      <div style={{ flex: 2.5, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ ...pulse, width: 32, height: 32, borderRadius: '50%', flexShrink: 0 }} />
+    <div
+      className="dashboard-row"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: TABLE_COLUMNS,
+        gap: 14,
+        alignItems: 'center',
+        minWidth: 1020,
+        minHeight: 84,
+        padding: '16px 18px',
+        borderRadius: 20,
+        border: '1px solid #E5EBF4',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ ...pulse, width: 42, height: 42, borderRadius: '50%', flexShrink: 0 }} />
         <div>
-          <div style={{ ...pulse, width: 112, height: 12, marginBottom: 6 }} />
-          <div style={{ ...pulse, width: 80, height: 10 }} />
+          <div style={{ ...pulse, width: 118, height: 13, marginBottom: 8 }} />
+          <div style={{ ...pulse, width: 96, height: 11 }} />
         </div>
       </div>
-      {/* STATUS col flex 1 */}
-      <div style={{ flex: 1 }}>
-        <div style={{ ...pulse, width: 80, height: 20, borderRadius: 9999 }} />
+      <div>
+        <div style={{ ...pulse, width: 86, height: 26 }} />
       </div>
-      {/* DOCS col flex 1 */}
-      <div style={{ flex: 1 }}>
-        <div style={{ ...pulse, width: 32, height: 12 }} />
+      <div>
+        <div style={{ ...pulse, width: 34, height: 21, borderRadius: 10 }} />
+        <div style={{ ...pulse, width: 74, height: 11, marginTop: 8, borderRadius: 6 }} />
       </div>
-      {/* WAITING col flex 2 */}
-      <div style={{ flex: 2 }}>
-        <div style={{ ...pulse, width: 96, height: 20, borderRadius: 4 }} />
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap' }}>
+        <div style={{ ...pulse, width: 104, height: 26 }} />
+        <div style={{ ...pulse, width: 34, height: 26 }} />
       </div>
-      {/* LAST REPLY col flex 1.5 */}
-      <div style={{ flex: 1.5 }}>
-        <div style={{ ...pulse, width: 64, height: 12 }} />
+      <div>
+        <div style={{ ...pulse, width: 72, height: 13, borderRadius: 6 }} />
+        <div style={{ ...pulse, width: 92, height: 11, marginTop: 8, borderRadius: 6 }} />
       </div>
-      {/* ACTION col flex 1 */}
-      <div style={{ flex: 1 }} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div style={{ ...pulse, width: 104, height: 36, borderRadius: 12 }} />
+        <div style={{ ...pulse, width: 104, height: 36, borderRadius: 12 }} />
+      </div>
     </div>
   );
 }

@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Copy, Download, ExternalLink, MessageSquareText, QrCode, Smartphone } from 'lucide-react';
+import logo from '../../../src/assets/logo.png';
 import { getPublicPreparer } from '../api';
 import PublicIntakeShell from '../components/PublicIntakeShell';
 import { ToastContainer, toast } from '../components/Toast';
 import type { PublicPreparerData } from '../types';
 import {
+  DEMO_PUBLIC_PREPARER,
   buildLaunchUrl,
   buildQrImageUrl,
   buildSignupUrl,
   formatPhoneForDisplay,
+  getBrandColor,
+  isDemoPreparerId,
 } from '../utils/publicIntake';
 
 export default function PublicQr() {
@@ -18,9 +22,17 @@ export default function PublicQr() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const isDemo = isDemoPreparerId(preparerId);
 
   useEffect(() => {
     if (!preparerId) return;
+
+    if (isDemo) {
+      setData(DEMO_PUBLIC_PREPARER);
+      setError(null);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     getPublicPreparer(preparerId)
@@ -30,7 +42,7 @@ export default function PublicQr() {
       })
       .catch(() => setError('This intake page is not available right now.'))
       .finally(() => setLoading(false));
-  }, [preparerId]);
+  }, [isDemo, preparerId]);
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const launchUrl = useMemo(
@@ -44,6 +56,8 @@ export default function PublicQr() {
   const qrUrl = useMemo(() => buildQrImageUrl(launchUrl), [launchUrl]);
   const businessName = data?.preparer.businessName ?? 'TaxPing';
   const phoneDisplay = formatPhoneForDisplay(data?.preparer.twilioNumber ?? null);
+  const brandColor = getBrandColor(data?.preparer.branding.color);
+  const logoSrc = data?.preparer.branding.logoUrl || logo;
   const isReady = Boolean(data?.preparer.twilioNumber);
 
   async function handleCopySignupLink() {
@@ -83,55 +97,66 @@ export default function PublicQr() {
   return (
     <>
       <PublicIntakeShell
-        eyebrow="Public Intake"
-        title="Put one clean code anywhere clients already look."
-        subtitle="Display this QR on a screen, at your desk, or in printed material. Scanning it opens a short handoff page that immediately tries to launch the client’s texting app so they can start the document thread."
+        fitViewport
+        eyebrow={isDemo ? 'Public Intake Demo' : 'Public Intake'}
+        title={isDemo ? 'A branded QR poster a solo tax pro can show anywhere.' : 'Put one clean code anywhere clients already look.'}
+        subtitle={
+          isDemo
+            ? 'This demo stays inside one clean screen, carries visible branding, and opens the same messaging handoff without needing any live Twilio setup.'
+            : 'Display this QR on a screen, at your desk, or in printed material. Scanning it opens a short handoff page that immediately tries to launch the client’s texting app so they can start the document thread.'
+        }
         aside={
           <>
-            <div>
+            <div className="public-enter public-enter-delay-2">
               <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#93C5FD' }}>
-                Live line
+                {isDemo ? 'Demo line' : 'Live line'}
               </div>
-              <div style={{ marginTop: 10, fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em' }}>
+              <div style={{ marginTop: 8, fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 800, letterSpacing: '-0.03em' }}>
                 {loading ? 'Loading…' : phoneDisplay}
               </div>
-              <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.6, color: '#CBD5E1' }}>
-                Clients land in your branded TaxPing flow with {businessName}. If they are on social instead of scanning, send them the public signup link below.
+              <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.55, color: '#CBD5E1' }}>
+                {isDemo
+                  ? `Clients still see the branded TaxPing flow with ${businessName}. Use this version when you need to demo the vision before a real texting line is connected.`
+                  : `Clients land in your branded TaxPing flow with ${businessName}. If they are on social instead of scanning, send them the public signup link below.`}
               </div>
             </div>
 
-            <div style={{ display: 'grid', gap: 12 }}>
-              <div style={{ borderRadius: 18, background: 'rgba(255,255,255,0.06)', padding: 16 }}>
+            <div style={{ display: 'grid', gap: 10 }}>
+              <div className="public-card public-enter public-enter-delay-3" style={{ borderRadius: 18, background: 'rgba(255,255,255,0.06)', padding: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700 }}>
                   <Smartphone size={16} color="#93C5FD" /> What scanning does
                 </div>
-                <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: '#CBD5E1' }}>
+                <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.55, color: '#CBD5E1' }}>
                   Opens a TaxPing launch page, detects mobile device behavior, and then pushes the client toward iMessage or SMS with a starter text ready to send.
                 </div>
               </div>
 
-              <div style={{ borderRadius: 18, background: 'rgba(255,255,255,0.06)', padding: 16 }}>
+              <div className="public-card public-enter public-enter-delay-4" style={{ borderRadius: 18, background: 'rgba(255,255,255,0.06)', padding: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700 }}>
                   <MessageSquareText size={16} color="#93C5FD" /> Social fallback
                 </div>
-                <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: '#CBD5E1' }}>
-                  Share the signup form when a QR is inconvenient. That form texts the client directly after they submit their name and mobile number.
+                <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.55, color: '#CBD5E1' }}>
+                  {isDemo
+                    ? 'Pair this with the demo signup form when you want to show both entry points in a pitch or walkthrough.'
+                    : 'Share the signup form when a QR is inconvenient. That form texts the client directly after they submit their name and mobile number.'}
                 </div>
               </div>
             </div>
           </>
         }
       >
-        <div style={{ display: 'grid', gap: 20 }}>
+        <div style={{ display: 'grid', gap: 16, height: '100%', minHeight: 0, alignContent: 'space-between' }}>
           <div
+            className="public-card public-enter public-enter-delay-2"
             style={{
               borderRadius: 24,
               background: '#FBFCFF',
               border: '1px solid #E2E8F0',
-              padding: 24,
+              padding: 18,
               display: 'grid',
-              gap: 18,
+              gap: 14,
               justifyItems: 'center',
+              minHeight: 0,
             }}
           >
             <div
@@ -140,44 +165,68 @@ export default function PublicQr() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: 12,
+                gap: 10,
                 flexWrap: 'wrap',
               }}
             >
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748B' }}>
-                  {businessName}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                <div
+                  className="public-logo-tile public-enter public-enter-delay-3"
+                  style={{
+                    width: 54,
+                    height: 54,
+                    borderRadius: 16,
+                    background: `${brandColor}16`,
+                    display: 'grid',
+                    placeItems: 'center',
+                    flexShrink: 0,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <img
+                    src={logoSrc}
+                    alt={`${businessName} logo`}
+                    style={{ width: 34, height: 34, objectFit: 'contain' }}
+                  />
                 </div>
-                <div style={{ marginTop: 6, fontSize: 20, fontWeight: 800, color: '#111827', letterSpacing: '-0.03em' }}>
-                  Scan to start your tax document text thread
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748B' }}>
+                    {businessName}
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 'clamp(16px, 2.4vw, 20px)', fontWeight: 800, color: '#111827', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+                  {isDemo ? 'Scan to preview the client texting handoff' : 'Scan to start your tax document text thread'}
+                  </div>
                 </div>
               </div>
               <div
+                className="public-chip public-enter public-enter-delay-4"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 8,
-                  padding: '8px 12px',
+                  padding: '8px 10px',
                   borderRadius: 999,
-                  background: isReady ? '#ECFDF3' : '#FFF7ED',
-                  color: isReady ? '#166534' : '#C2410C',
+                  background: isDemo ? `${brandColor}16` : isReady ? '#ECFDF3' : '#FFF7ED',
+                  color: isDemo ? brandColor : isReady ? '#166534' : '#C2410C',
                   fontSize: 12,
                   fontWeight: 700,
                 }}
               >
                 <QrCode size={14} />
-                {isReady ? 'Ready to share' : 'Setup required'}
+                {isDemo ? 'Demo mode' : isReady ? 'Ready to share' : 'Setup required'}
               </div>
             </div>
 
             <div
+              className="public-card public-float public-sweep public-enter public-enter-delay-4"
               style={{
-                width: 'min(100%, 440px)',
+                width: 'min(100%, 320px)',
                 aspectRatio: '1 / 1',
-                borderRadius: 28,
+                maxHeight: '40svh',
+                borderRadius: 24,
                 background: 'white',
                 border: '1px solid #E2E8F0',
-                boxShadow: 'inset 0 0 0 12px white',
+                boxShadow: 'inset 0 0 0 10px white',
                 display: 'grid',
                 placeItems: 'center',
                 overflow: 'hidden',
@@ -189,37 +238,40 @@ export default function PublicQr() {
                 <img
                   src={qrUrl}
                   alt={`QR code for ${businessName}`}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 20 }}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 14 }}
                 />
               ) : (
-                <div style={{ padding: 28, textAlign: 'center', color: '#64748B', fontSize: 14, lineHeight: 1.7 }}>
+                <div style={{ padding: 24, textAlign: 'center', color: '#64748B', fontSize: 13, lineHeight: 1.6 }}>
                   Connect a texting line first. Once a live number is attached, this page becomes your ready-to-share QR poster.
                 </div>
               )}
             </div>
 
-            <div style={{ textAlign: 'center', maxWidth: 440 }}>
-              <div style={{ fontSize: 14, color: '#475569', lineHeight: 1.7 }}>
-                Clients scan, land on a clean TaxPing handoff page, and then open Messages with a starter text. Your live line: <strong>{phoneDisplay}</strong>
+            <div style={{ textAlign: 'center', maxWidth: 420 }}>
+              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.55 }}>
+                {isDemo
+                  ? <>This demo QR lands on the same TaxPing handoff and opens Messages with a prepared starter text. Demo line: <strong>{phoneDisplay}</strong></>
+                  : <>Clients scan, land on a clean TaxPing handoff page, and then open Messages with a starter text. Your live line: <strong>{phoneDisplay}</strong></>}
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div className="public-enter public-enter-delay-4" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
+              className="public-button"
               onClick={handleDownloadQr}
               disabled={!isReady || downloading}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
-                padding: '12px 16px',
+                padding: '11px 14px',
                 borderRadius: 12,
                 border: 'none',
                 background: !isReady ? '#CBD5E1' : '#111827',
                 color: 'white',
                 cursor: !isReady ? 'not-allowed' : 'pointer',
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: 700,
                 fontFamily: 'inherit',
               }}
@@ -228,19 +280,20 @@ export default function PublicQr() {
             </button>
 
             <button
+              className="public-button"
               onClick={handleCopySignupLink}
               disabled={!isReady}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
-                padding: '12px 16px',
+                padding: '11px 14px',
                 borderRadius: 12,
                 border: '1px solid #CBD5E1',
                 background: 'white',
                 color: '#0F172A',
                 cursor: !isReady ? 'not-allowed' : 'pointer',
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: 700,
                 fontFamily: 'inherit',
               }}
@@ -249,17 +302,18 @@ export default function PublicQr() {
             </button>
 
             <Link
+              className="public-button"
               to={preparerId ? `/public/${preparerId}/signup` : '#'}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
-                padding: '12px 16px',
+                padding: '11px 14px',
                 borderRadius: 12,
                 background: '#EEF2FF',
                 color: '#2E5ED4',
                 textDecoration: 'none',
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: 700,
               }}
             >

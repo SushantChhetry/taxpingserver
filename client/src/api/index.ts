@@ -46,6 +46,12 @@ export async function updatePreparerSettings(
   preparerId: string,
   payload: {
     businessName: string;
+    brandColor: string;
+    brandTagline: string;
+    brandLogoUrl: string;
+    websiteUrl: string;
+    instagramUrl: string;
+    linkedinUrl: string;
     autoFollowupEnabled: boolean;
     autoFollowupHours: number;
   }

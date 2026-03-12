@@ -1,4 +1,30 @@
+import type { BrandProfile, PublicPreparerData } from '../types';
+
 const DEFAULT_OPENING_TEXT = "Hi, I'm ready to send my tax documents.";
+export const DEFAULT_BRAND_COLOR = '#2E5ED4';
+
+export const DEMO_PREPARER_ID = 'demo';
+
+export const DEMO_PUBLIC_PREPARER: PublicPreparerData = {
+  preparer: {
+    id: DEMO_PREPARER_ID,
+    businessName: 'North Coast Tax Studio',
+    twilioNumber: '+15550102048',
+    taxYear: new Date().getFullYear(),
+    branding: {
+      color: '#1D4ED8',
+      tagline: 'Clean, calm filing for busy clients.',
+      logoUrl: null,
+      websiteUrl: 'https://taxping.ai',
+      instagramUrl: 'https://instagram.com/taxping',
+      linkedinUrl: 'https://linkedin.com/company/taxping',
+    },
+  },
+};
+
+export function isDemoPreparerId(preparerId?: string): boolean {
+  return preparerId === DEMO_PREPARER_ID;
+}
 
 export function buildLaunchUrl(origin: string, preparerId: string): string {
   return `${origin}/public/${preparerId}/connect`;
@@ -31,4 +57,20 @@ export function formatPhoneForDisplay(phone: string | null): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.length !== 11 || !digits.startsWith('1')) return phone;
   return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+}
+
+export function getBrandColor(color: string | null | undefined): string {
+  return /^#[0-9A-Fa-f]{6}$/.test(color ?? '') ? String(color).toUpperCase() : DEFAULT_BRAND_COLOR;
+}
+
+export function getBrandTint(color: string, alpha: string): string {
+  return /^#[0-9A-Fa-f]{6}$/.test(color) ? `${color}${alpha}` : `${DEFAULT_BRAND_COLOR}${alpha}`;
+}
+
+export function getBrandLinks(branding: BrandProfile) {
+  return [
+    branding.websiteUrl ? { label: 'Website', href: branding.websiteUrl, kind: 'website' as const } : null,
+    branding.instagramUrl ? { label: 'Instagram', href: branding.instagramUrl, kind: 'instagram' as const } : null,
+    branding.linkedinUrl ? { label: 'LinkedIn', href: branding.linkedinUrl, kind: 'linkedin' as const } : null,
+  ].filter((item): item is { label: string; href: string; kind: 'website' | 'instagram' | 'linkedin' } => Boolean(item));
 }

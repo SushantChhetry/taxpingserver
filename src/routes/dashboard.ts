@@ -64,6 +64,31 @@ function getPreparerDisplayName(preparerName: string, businessName: string | nul
   return businessName?.trim() || preparerName;
 }
 
+function normalizeOptionalText(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function normalizeBrandColor(value: unknown): string | null {
+  const trimmed = normalizeOptionalText(value);
+  if (!trimmed) return null;
+  return /^#[0-9A-Fa-f]{6}$/.test(trimmed) ? trimmed.toUpperCase() : null;
+}
+
+function normalizeHttpUrl(value: unknown): string | null {
+  const trimmed = normalizeOptionalText(value);
+  if (!trimmed) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 function getTaxYearOptions(selectedYears: number[] = []): number[] {
   const years = new Set([
     DEFAULT_TAX_YEAR + 1,
@@ -540,6 +565,14 @@ function mapPreparerSettingsResponse(data: Awaited<ReturnType<typeof getPreparer
       autoFollowupHours: data.auto_followup_hours,
       twilioNumber: data.twilio_number,
       driveConnected: Boolean(data.drive_folder_id),
+      branding: {
+        color: data.brand_color,
+        tagline: data.brand_tagline,
+        logoUrl: data.brand_logo_url,
+        websiteUrl: data.website_url,
+        instagramUrl: data.instagram_url,
+        linkedinUrl: data.linkedin_url,
+      },
     },
   };
 }
@@ -565,10 +598,22 @@ async function handleUpdatePreparerSettings(
   try {
     const {
       businessName,
+      brandColor,
+      brandTagline,
+      brandLogoUrl,
+      websiteUrl,
+      instagramUrl,
+      linkedinUrl,
       autoFollowupEnabled,
       autoFollowupHours,
     } = req.body as {
       businessName?: string;
+      brandColor?: string;
+      brandTagline?: string;
+      brandLogoUrl?: string;
+      websiteUrl?: string;
+      instagramUrl?: string;
+      linkedinUrl?: string;
       autoFollowupEnabled?: boolean;
       autoFollowupHours?: number;
     };
@@ -588,10 +633,46 @@ async function handleUpdatePreparerSettings(
       return;
     }
 
+    const normalizedBrandColor = normalizeBrandColor(brandColor);
+    if (brandColor !== undefined && brandColor !== '' && !normalizedBrandColor) {
+      res.status(400).json({ error: 'brandColor must be a hex color like #2E5ED4' });
+      return;
+    }
+
+    const normalizedLogoUrl = normalizeHttpUrl(brandLogoUrl);
+    if (brandLogoUrl !== undefined && brandLogoUrl !== '' && !normalizedLogoUrl) {
+      res.status(400).json({ error: 'brandLogoUrl must be a valid http or https URL' });
+      return;
+    }
+
+    const normalizedWebsiteUrl = normalizeHttpUrl(websiteUrl);
+    if (websiteUrl !== undefined && websiteUrl !== '' && !normalizedWebsiteUrl) {
+      res.status(400).json({ error: 'websiteUrl must be a valid http or https URL' });
+      return;
+    }
+
+    const normalizedInstagramUrl = normalizeHttpUrl(instagramUrl);
+    if (instagramUrl !== undefined && instagramUrl !== '' && !normalizedInstagramUrl) {
+      res.status(400).json({ error: 'instagramUrl must be a valid http or https URL' });
+      return;
+    }
+
+    const normalizedLinkedinUrl = normalizeHttpUrl(linkedinUrl);
+    if (linkedinUrl !== undefined && linkedinUrl !== '' && !normalizedLinkedinUrl) {
+      res.status(400).json({ error: 'linkedinUrl must be a valid http or https URL' });
+      return;
+    }
+
     const followupHours = autoFollowupHours;
 
     const updated = await updatePreparerSettings(req.params.preparerId, {
       businessName: businessName.trim(),
+      brandColor: normalizedBrandColor,
+      brandTagline: normalizeOptionalText(brandTagline),
+      brandLogoUrl: normalizedLogoUrl,
+      websiteUrl: normalizedWebsiteUrl,
+      instagramUrl: normalizedInstagramUrl,
+      linkedinUrl: normalizedLinkedinUrl,
       autoFollowupEnabled,
       autoFollowupHours: followupHours,
     });

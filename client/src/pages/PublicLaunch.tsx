@@ -1,18 +1,33 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, MessageSquareText, Smartphone } from 'lucide-react';
+import { ArrowRight, MessageSquareText } from 'lucide-react';
+import logo from '../../../src/assets/logo.png';
 import { getPublicPreparer } from '../api';
 import type { PublicPreparerData } from '../types';
-import { buildSmsHref, formatPhoneForDisplay } from '../utils/publicIntake';
+import {
+  DEMO_PUBLIC_PREPARER,
+  buildSmsHref,
+  formatPhoneForDisplay,
+  getBrandColor,
+  isDemoPreparerId,
+} from '../utils/publicIntake';
 
 export default function PublicLaunch() {
   const { preparerId } = useParams<{ preparerId: string }>();
   const [data, setData] = useState<PublicPreparerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isDemo = isDemoPreparerId(preparerId);
 
   useEffect(() => {
     if (!preparerId) return;
+
+    if (isDemo) {
+      setData(DEMO_PUBLIC_PREPARER);
+      setError(null);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     getPublicPreparer(preparerId)
@@ -22,7 +37,7 @@ export default function PublicLaunch() {
       })
       .catch(() => setError('This texting handoff is not available right now.'))
       .finally(() => setLoading(false));
-  }, [preparerId]);
+  }, [isDemo, preparerId]);
 
   const smsHref = useMemo(() => {
     if (!data?.preparer.twilioNumber) return '#';
@@ -45,6 +60,8 @@ export default function PublicLaunch() {
   }, [data?.preparer.twilioNumber, smsHref]);
 
   const businessName = data?.preparer.businessName ?? 'TaxPing';
+  const brandColor = getBrandColor(data?.preparer.branding.color);
+  const logoSrc = data?.preparer.branding.logoUrl || logo;
 
   return (
     <div
@@ -58,6 +75,7 @@ export default function PublicLaunch() {
       }}
     >
       <div
+        className="public-panel public-enter public-enter-delay-1"
         style={{
           width: 'min(100%, 520px)',
           borderRadius: 28,
@@ -69,30 +87,35 @@ export default function PublicLaunch() {
         }}
       >
         <div
+          className="public-logo-tile public-enter public-enter-delay-2"
           style={{
             width: 64,
             height: 64,
             margin: '0 auto',
             borderRadius: 20,
-            background: '#EEF2FF',
-            color: '#2E5ED4',
+            background: `${brandColor}16`,
+            color: brandColor,
             display: 'grid',
             placeItems: 'center',
+            overflow: 'hidden',
           }}
         >
-          <Smartphone size={30} />
+          <img src={logoSrc} alt={`${businessName} logo`} style={{ width: 36, height: 36, objectFit: 'contain' }} />
         </div>
 
-        <div style={{ marginTop: 20, fontSize: 34, fontWeight: 800, letterSpacing: '-0.04em', color: '#0F172A', lineHeight: 1.05 }}>
+        <div className="public-enter public-enter-delay-2" style={{ marginTop: 20, fontSize: 34, fontWeight: 800, letterSpacing: '-0.04em', color: '#0F172A', lineHeight: 1.05 }}>
           {loading ? 'Loading…' : 'Opening Messages'}
         </div>
-        <div style={{ marginTop: 14, fontSize: 15, lineHeight: 1.7, color: '#475569' }}>
+        <div className="public-enter public-enter-delay-3" style={{ marginTop: 14, fontSize: 15, lineHeight: 1.7, color: '#475569' }}>
           {error
             ? error
-            : `We’re handing you into ${businessName}'s text thread. If your phone does not jump automatically, use the button below.`}
+            : isDemo
+              ? `This is the demo handoff into ${businessName}'s text thread. The button below uses a safe demo number so you can show the transition without any live messaging setup.`
+              : `We’re handing you into ${businessName}'s text thread. If your phone does not jump automatically, use the button below.`}
         </div>
 
         <div
+          className="public-card public-enter public-enter-delay-3"
           style={{
             marginTop: 22,
             borderRadius: 18,
@@ -102,15 +125,16 @@ export default function PublicLaunch() {
           }}
         >
           <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748B' }}>
-            Live line
+            {isDemo ? 'Demo line' : 'Live line'}
           </div>
           <div style={{ marginTop: 8, fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: '#111827' }}>
             {loading ? 'Loading…' : formatPhoneForDisplay(data?.preparer.twilioNumber ?? null)}
           </div>
         </div>
 
-        <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div className="public-enter public-enter-delay-4" style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <a
+            className="public-button"
             href={smsHref}
             style={{
               display: 'inline-flex',
@@ -125,9 +149,10 @@ export default function PublicLaunch() {
               fontWeight: 800,
             }}
           >
-            <MessageSquareText size={16} /> Open Messages
+            <MessageSquareText size={16} /> {isDemo ? 'Preview Messages handoff' : 'Open Messages'}
           </a>
           <Link
+            className="public-button"
             to={preparerId ? `/public/${preparerId}/signup` : '#'}
             style={{
               display: 'inline-flex',
@@ -135,8 +160,8 @@ export default function PublicLaunch() {
               gap: 8,
               padding: '12px 16px',
               borderRadius: 12,
-              background: '#EEF2FF',
-              color: '#2E5ED4',
+              background: `${brandColor}16`,
+              color: brandColor,
               textDecoration: 'none',
               fontSize: 14,
               fontWeight: 800,

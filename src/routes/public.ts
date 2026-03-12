@@ -13,6 +13,14 @@ function mapPublicPreparerResponse(preparer: Awaited<ReturnType<typeof getPublic
       businessName: preparer.business_name?.trim() || preparer.name,
       twilioNumber: preparer.twilio_number,
       taxYear: DEFAULT_TAX_YEAR,
+      branding: {
+        color: preparer.brand_color,
+        tagline: preparer.brand_tagline,
+        logoUrl: preparer.brand_logo_url,
+        websiteUrl: preparer.website_url,
+        instagramUrl: preparer.instagram_url,
+        linkedinUrl: preparer.linkedin_url,
+      },
     },
   };
 }

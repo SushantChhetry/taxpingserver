@@ -5,6 +5,12 @@ CREATE TABLE IF NOT EXISTS preparers (
   drive_tokens JSONB,
   drive_folder_id TEXT,
   business_name TEXT,
+  brand_color TEXT,
+  brand_tagline TEXT,
+  brand_logo_url TEXT,
+  website_url TEXT,
+  instagram_url TEXT,
+  linkedin_url TEXT,
   auto_followup_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   auto_followup_hours INTEGER NOT NULL DEFAULT 48,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -64,5 +70,11 @@ CREATE TABLE IF NOT EXISTS dead_letter_queue (
 ALTER TABLE preparers
   ADD COLUMN IF NOT EXISTS drive_tokens JSONB,
   ADD COLUMN IF NOT EXISTS business_name TEXT,
+  ADD COLUMN IF NOT EXISTS brand_color TEXT,
+  ADD COLUMN IF NOT EXISTS brand_tagline TEXT,
+  ADD COLUMN IF NOT EXISTS brand_logo_url TEXT,
+  ADD COLUMN IF NOT EXISTS website_url TEXT,
+  ADD COLUMN IF NOT EXISTS instagram_url TEXT,
+  ADD COLUMN IF NOT EXISTS linkedin_url TEXT,
   ADD COLUMN IF NOT EXISTS auto_followup_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   ADD COLUMN IF NOT EXISTS auto_followup_hours INTEGER NOT NULL DEFAULT 48;

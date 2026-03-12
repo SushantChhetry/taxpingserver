@@ -43,6 +43,15 @@ export interface DashboardData {
   stats: { total: number; waiting: number; complete: number; issues: number };
 }
 
+export interface BrandProfile {
+  color: string | null;
+  tagline: string | null;
+  logoUrl: string | null;
+  websiteUrl: string | null;
+  instagramUrl: string | null;
+  linkedinUrl: string | null;
+}
+
 export interface PreparerSettingsData {
   preparer: {
     id: string;
@@ -53,6 +62,7 @@ export interface PreparerSettingsData {
     autoFollowupHours: number;
     twilioNumber: string | null;
     driveConnected: boolean;
+    branding: BrandProfile;
   };
 }
 
@@ -62,6 +72,7 @@ export interface PublicPreparerData {
     businessName: string;
     twilioNumber: string | null;
     taxYear: number;
+    branding: BrandProfile;
   };
 }
 

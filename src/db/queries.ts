@@ -10,6 +10,12 @@ export type Preparer = {
   name: string;
   email: string;
   business_name: string | null;
+  brand_color: string | null;
+  brand_tagline: string | null;
+  brand_logo_url: string | null;
+  website_url: string | null;
+  instagram_url: string | null;
+  linkedin_url: string | null;
   drive_folder_id: string | null;
   drive_tokens: DriveTokens | null;
   auto_followup_enabled: boolean;
@@ -84,6 +90,12 @@ export type PreparerSettings = Pick<
   | 'name'
   | 'email'
   | 'business_name'
+  | 'brand_color'
+  | 'brand_tagline'
+  | 'brand_logo_url'
+  | 'website_url'
+  | 'instagram_url'
+  | 'linkedin_url'
   | 'drive_folder_id'
   | 'auto_followup_enabled'
   | 'auto_followup_hours'
@@ -91,7 +103,18 @@ export type PreparerSettings = Pick<
   twilio_number: string | null;
 };
 
-export type PublicPreparer = Pick<Preparer, 'id' | 'name' | 'business_name'> & {
+export type PublicPreparer = Pick<
+  Preparer,
+  | 'id'
+  | 'name'
+  | 'business_name'
+  | 'brand_color'
+  | 'brand_tagline'
+  | 'brand_logo_url'
+  | 'website_url'
+  | 'instagram_url'
+  | 'linkedin_url'
+> & {
   twilio_number: string | null;
 };
 
@@ -270,6 +293,12 @@ export async function getPreparerSettings(
             p.name,
             p.email,
             p.business_name,
+            p.brand_color,
+            p.brand_tagline,
+            p.brand_logo_url,
+            p.website_url,
+            p.instagram_url,
+            p.linkedin_url,
             p.drive_folder_id,
             p.auto_followup_enabled,
             p.auto_followup_hours,
@@ -290,6 +319,12 @@ export async function getPublicPreparer(preparerId: string): Promise<PublicPrepa
     `SELECT p.id,
             p.name,
             p.business_name,
+            p.brand_color,
+            p.brand_tagline,
+            p.brand_logo_url,
+            p.website_url,
+            p.instagram_url,
+            p.linkedin_url,
             pn.twilio_number
      FROM preparers p
      LEFT JOIN phone_numbers pn
@@ -306,6 +341,12 @@ export async function updatePreparerSettings(
   preparerId: string,
   input: {
     businessName: string;
+    brandColor: string | null;
+    brandTagline: string | null;
+    brandLogoUrl: string | null;
+    websiteUrl: string | null;
+    instagramUrl: string | null;
+    linkedinUrl: string | null;
     autoFollowupEnabled: boolean;
     autoFollowupHours: number;
   }
@@ -313,13 +354,25 @@ export async function updatePreparerSettings(
   const updateResult = await pool.query<{ id: string }>(
     `UPDATE preparers
      SET business_name = $2,
-         auto_followup_enabled = $3,
-         auto_followup_hours = $4
+         brand_color = $3,
+         brand_tagline = $4,
+         brand_logo_url = $5,
+         website_url = $6,
+         instagram_url = $7,
+         linkedin_url = $8,
+         auto_followup_enabled = $9,
+         auto_followup_hours = $10
      WHERE id = $1
      RETURNING id`,
     [
       preparerId,
       input.businessName,
+      input.brandColor,
+      input.brandTagline,
+      input.brandLogoUrl,
+      input.websiteUrl,
+      input.instagramUrl,
+      input.linkedinUrl,
       input.autoFollowupEnabled,
       input.autoFollowupHours,
     ]

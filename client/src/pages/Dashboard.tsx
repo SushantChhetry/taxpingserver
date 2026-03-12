@@ -1,16 +1,26 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Send, FolderOpen, Users, Search } from 'lucide-react';
-import { getDashboard, sendRequest, sendReminder } from '../api';
-import type { DashboardData, Client } from '../types';
-import { getInitials, formatRelativeTime } from '../utils/time';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  CheckCircle2,
+  Clock3,
+  FolderOpen,
+  Plus,
+  Search,
+  Send,
+  TriangleAlert,
+  Users,
+} from 'lucide-react';
+import { getDashboard, sendReminder, sendRequest } from '../api';
+import type { Client, DashboardData } from '../types';
+import { formatRelativeTime, getInitials } from '../utils/time';
 import Sidebar from '../components/Sidebar';
 import StatusBadge from '../components/StatusBadge';
 import AddClientModal from '../components/AddClientModal';
 import SkeletonRow from '../components/SkeletonRow';
 import { ToastContainer, toast } from '../components/Toast';
 
-// ── Demo client pinned row ────────────────────────────────────────────────────
+const TABLE_COLUMNS =
+  'minmax(232px, 2.35fr) minmax(116px, 0.95fr) minmax(88px, 0.72fr) minmax(208px, 1.45fr) minmax(122px, 0.95fr) minmax(220px, 1.45fr)';
 
 const DEMO_CLIENT: Client = {
   id: 'demo',
@@ -24,7 +34,80 @@ const DEMO_CLIENT: Client = {
   taxYear: 2027,
 };
 
-// ── Table row ────────────────────────────────────────────────────────────────
+function ActionButton({
+  label,
+  icon,
+  onClick,
+  href,
+  loading = false,
+  primary = false,
+  muted = false,
+}: {
+  label: string;
+  icon: ReactNode;
+  onClick?: () => void;
+  href?: string;
+  loading?: boolean;
+  primary?: boolean;
+  muted?: boolean;
+}) {
+  const commonStyle = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minWidth: 104,
+    height: 36,
+    padding: '0 12px',
+    borderRadius: 12,
+    fontSize: 12,
+    fontWeight: 700,
+    fontFamily: 'inherit',
+    whiteSpace: 'nowrap' as const,
+  };
+
+  if (href) {
+    return (
+      <a
+        className="overview-button"
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          ...commonStyle,
+          border: '1px solid #D7E1F1',
+          background: muted ? '#F9FAFB' : '#F8FAFF',
+          color: muted ? '#9CA3AF' : '#21449C',
+          textDecoration: 'none',
+          pointerEvents: muted ? 'none' : 'auto',
+        }}
+      >
+        {icon}
+        {label}
+      </a>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="overview-button"
+      disabled={loading || muted}
+      onClick={onClick}
+      style={{
+        ...commonStyle,
+        border: primary ? 'none' : '1px solid #D7E1F1',
+        background: primary ? '#21449C' : muted ? '#F9FAFB' : 'white',
+        color: primary ? 'white' : muted ? '#9CA3AF' : '#21449C',
+        cursor: loading || muted ? 'default' : 'pointer',
+        opacity: loading ? 0.72 : 1,
+      }}
+    >
+      {icon}
+      {loading ? 'Sending...' : label}
+    </button>
+  );
+}
 
 interface RowProps {
   client: Client;
@@ -35,134 +118,218 @@ interface RowProps {
 }
 
 function ClientRow({ client, preparerId, onSendRequest, onSendReminder, actionLoading }: RowProps) {
-  const [hovered, setHovered] = useState(false);
   const navigate = useNavigate();
-  const { id, name, mobile, status, docsCollected, docsPending, lastReplyAt, driveFolderId } = client;
-
+  const { id, name, mobile, status, docsCollected, docsPending, lastReplyAt, driveFolderId, taxYear } = client;
   const driveUrl = driveFolderId ? `https://drive.google.com/drive/folders/${driveFolderId}` : null;
-  const maxPills = 2;
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className="dashboard-row"
       style={{
-        display: 'flex', alignItems: 'center', padding: '0 32px', height: 52,
-        borderBottom: '1px solid #F3F4F6', cursor: 'default',
-        background: hovered ? '#FAFBFF' : 'white',
-        transition: 'background 100ms',
+        display: 'grid',
+        gridTemplateColumns: TABLE_COLUMNS,
+        gap: 14,
+        alignItems: 'center',
+        minWidth: 1020,
+        minHeight: 84,
+        padding: '16px 18px',
+        borderRadius: 20,
+        border: '1px solid #E5EBF4',
       }}
     >
-      {/* CLIENT */}
-      <div style={{ flex: 2.5, display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: '50%', background: '#EEF2FF',
-          color: '#3B6FE8', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 11, fontWeight: 700, flexShrink: 0,
-        }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+        <div
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: '50%',
+            background: '#EEF2FF',
+            color: '#3B6FE8',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 12,
+            fontWeight: 700,
+            flexShrink: 0,
+          }}
+        >
           {getInitials(name)}
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <button
+              type="button"
+              className="dashboard-row-name"
               onClick={() => navigate(`/dashboard/${preparerId}/client/${id}`)}
-              style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#3B6FE8')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#1A1A1A')}
-            >{name}</div>
+              style={{
+                border: 'none',
+                background: 'none',
+                padding: 0,
+                fontFamily: 'inherit',
+                fontSize: 14,
+                fontWeight: 700,
+                color: '#1A1A1A',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {name}
+            </button>
             {(id === 'demo' || mobile.startsWith('+1555')) && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#9B59B6', background: '#F5EEFF', border: '1px solid #DDD6FE', borderRadius: 4, padding: '1px 6px', flexShrink: 0, letterSpacing: '0.04em' }}>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: '#7C3AED',
+                  background: '#F5EEFF',
+                  border: '1px solid #DDD6FE',
+                  borderRadius: 999,
+                  padding: '2px 8px',
+                  flexShrink: 0,
+                  letterSpacing: '0.05em',
+                }}
+              >
                 DEMO
               </span>
             )}
           </div>
-          <div style={{ fontSize: 11, color: '#9CA3AF' }}>{mobile}</div>
+          <div style={{ marginTop: 4, fontSize: 12, color: '#7B879D', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {mobile} {taxYear ? `· ${taxYear} return` : ''}
+          </div>
         </div>
       </div>
 
-      {/* STATUS */}
-      <div style={{ flex: 1 }}>
+      <div style={{ minWidth: 0 }}>
         <StatusBadge status={status} />
       </div>
 
-      {/* DOCS */}
-      <div style={{ flex: 1, fontSize: 13 }}>
-        {docsCollected === 0
-          ? <span style={{ color: '#9CA3AF' }}>—</span>
-          : <><span style={{ fontWeight: 600, color: '#1A1A1A' }}>{docsCollected}</span><span style={{ color: '#6B7280' }}> docs</span></>
-        }
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: '#1A1A1A' }}>{docsCollected}</div>
+        <div style={{ marginTop: 5, fontSize: 12, color: '#7B879D', whiteSpace: 'nowrap' }}>
+          {docsCollected === 0 ? 'No uploads yet' : 'Saved to Drive'}
+        </div>
       </div>
 
-      {/* WAITING ON */}
-      <div style={{ flex: 2, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'nowrap' }}>
-        {docsPending.length === 0
-          ? <span style={{ fontSize: 13, color: '#9CA3AF' }}>—</span>
-          : <>
-              {docsPending.slice(0, maxPills).map((doc) => (
-                <span key={doc} style={{
-                  background: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA',
-                  borderRadius: 4, fontSize: 11, padding: '2px 7px', fontWeight: 500,
-                  whiteSpace: 'nowrap',
-                }}>{doc}</span>
-              ))}
-              {docsPending.length > maxPills && (
-                <span style={{ fontSize: 11, color: '#9CA3AF' }}>+{docsPending.length - maxPills} more</span>
-              )}
-            </>
-        }
-      </div>
-
-      {/* LAST REPLY */}
-      <div style={{ flex: 1.5, fontSize: 13, color: lastReplyAt ? '#6B7280' : '#9CA3AF' }}>
-        {formatRelativeTime(lastReplyAt)}
-      </div>
-
-      {/* ACTION */}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: 6, opacity: hovered ? 1 : 0, transition: 'opacity 150ms' }}>
-        {status === 'not_started' && (
-          <button
-            disabled={actionLoading}
-            onClick={() => onSendRequest(id, name)}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', overflow: 'hidden', minWidth: 0 }}>
+        {docsPending.length === 0 ? (
+          <span
             style={{
-              background: '#3B6FE8', color: 'white', border: 'none', borderRadius: 5,
-              fontSize: 11, fontWeight: 600, padding: '5px 10px', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'inherit',
-              opacity: actionLoading ? 0.6 : 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              background: status === 'complete' ? '#F0FDF4' : '#F5F8FF',
+              color: status === 'complete' ? '#15803D' : '#21449C',
+              border: `1px solid ${status === 'complete' ? '#BBF7D0' : '#DCE7FF'}`,
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 600,
+              padding: '6px 10px',
             }}
           >
-            <Send size={10} />{actionLoading ? '...' : 'Send Request'}
-          </button>
-        )}
-        {status === 'in_progress' && (
+            <CheckCircle2 size={13} />
+            {status === 'complete' ? 'Ready to review' : 'Nothing pending'}
+          </span>
+        ) : (
           <>
-            <button
-              disabled={actionLoading}
-              onClick={() => onSendReminder(id, name)}
+            <span
               style={{
-                border: '1px solid #E2E6F0', background: 'white', color: '#1A1A1A',
-                borderRadius: 5, fontSize: 11, fontWeight: 500, padding: '5px 10px',
-                cursor: 'pointer', fontFamily: 'inherit', opacity: actionLoading ? 0.6 : 1,
+                maxWidth: 128,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                background: '#FFF7ED',
+                color: '#C2410C',
+                border: '1px solid #FED7AA',
+                borderRadius: 999,
+                fontSize: 11,
+                padding: '6px 10px',
+                fontWeight: 600,
+                flexShrink: 0,
               }}
+              title={docsPending[0]}
             >
-              {actionLoading ? '...' : 'Remind'}
-            </button>
-            {driveUrl
-              ? <a href={driveUrl} target="_blank" rel="noopener noreferrer" style={{ border: '1px solid #3B6FE8', background: 'white', color: '#3B6FE8', borderRadius: 5, fontSize: 11, fontWeight: 500, padding: '5px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}><FolderOpen size={10} />View</a>
-              : <span style={{ border: '1px solid #E2E6F0', background: 'white', color: '#9CA3AF', borderRadius: 5, fontSize: 11, padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 4, opacity: 0.5 }}><FolderOpen size={10} />View</span>
-            }
+              {docsPending[0]}
+            </span>
+            {docsPending.length > 1 && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: 34,
+                  height: 26,
+                  padding: '0 8px',
+                  borderRadius: 999,
+                  background: '#FFF4E6',
+                  color: '#C2410C',
+                  border: '1px solid #F8D4A4',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                +{docsPending.length - 1}
+              </span>
+            )}
           </>
         )}
+      </div>
+
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: lastReplyAt ? '#1A1A1A' : '#8B97B0', whiteSpace: 'nowrap' }}>
+          {formatRelativeTime(lastReplyAt)}
+        </div>
+        <div style={{ marginTop: 5, fontSize: 12, color: '#7B879D', whiteSpace: 'nowrap' }}>
+          {lastReplyAt ? 'Latest client activity' : 'No response yet'}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'nowrap', minWidth: 0 }}>
+        {status === 'not_started' && (
+          <ActionButton
+            label="Send Request"
+            icon={<Send size={13} />}
+            onClick={() => onSendRequest(id, name)}
+            loading={actionLoading}
+            primary
+          />
+        )}
+
+        {status === 'in_progress' && (
+          <>
+            <ActionButton
+              label="Remind"
+              icon={<Clock3 size={13} />}
+              onClick={() => onSendReminder(id, name)}
+              loading={actionLoading}
+            />
+            <ActionButton
+              label={driveUrl ? 'View Docs' : 'No Docs'}
+              icon={<FolderOpen size={13} />}
+              href={driveUrl ?? undefined}
+              muted={!driveUrl}
+            />
+          </>
+        )}
+
         {status === 'complete' && (
-          driveUrl
-            ? <a href={driveUrl} target="_blank" rel="noopener noreferrer" style={{ border: '1px solid #E2E6F0', background: 'white', color: '#6B7280', borderRadius: 5, fontSize: 11, fontWeight: 500, padding: '5px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}><FolderOpen size={10} />View Docs</a>
-            : <span style={{ border: '1px solid #E2E6F0', background: 'white', color: '#9CA3AF', borderRadius: 5, fontSize: 11, padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 4, opacity: 0.5 }}><FolderOpen size={10} />View Docs</span>
+          <ActionButton
+            label={driveUrl ? 'View Docs' : 'No Docs'}
+            icon={<FolderOpen size={13} />}
+            href={driveUrl ?? undefined}
+            muted={!driveUrl}
+          />
         )}
       </div>
     </div>
   );
 }
-
-// ── Dashboard page ────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
   const { preparerId } = useParams<{ preparerId: string }>();
@@ -176,8 +343,8 @@ export default function Dashboard() {
   const load = useCallback(async () => {
     if (!preparerId) return;
     try {
-      const d = await getDashboard(preparerId);
-      setData(d);
+      const next = await getDashboard(preparerId);
+      setData(next);
       setError(null);
     } catch {
       setError('Failed to load dashboard');
@@ -186,11 +353,13 @@ export default function Dashboard() {
     }
   }, [preparerId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   function setActionLoading(id: string, on: boolean) {
-    setLoadingActions((prev) => {
-      const next = new Set(prev);
+    setLoadingActions((current) => {
+      const next = new Set(current);
       on ? next.add(id) : next.delete(id);
       return next;
     });
@@ -222,37 +391,103 @@ export default function Dashboard() {
     }
   }, [load]);
 
-  const filtered = (data?.clients ?? []).filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
+  const clients = data?.clients ?? [];
+  const searchLower = search.trim().toLowerCase();
+  const filtered = clients.filter((client) =>
+    client.name.toLowerCase().includes(searchLower) ||
+    client.mobile.toLowerCase().includes(searchLower)
   );
+  const demoMatches =
+    searchLower === '' ||
+    DEMO_CLIENT.name.toLowerCase().includes(searchLower) ||
+    DEMO_CLIENT.mobile.toLowerCase().includes(searchLower);
+  const visibleClients = demoMatches ? [DEMO_CLIENT, ...filtered] : filtered;
 
   const { stats } = data ?? { stats: { total: 0, waiting: 0, complete: 0, issues: 0 } };
   const preparer = data?.preparer ?? { id: '', name: '', email: '', businessName: '' };
-  const workspaceName = preparer.businessName || preparer.name;
+  const workspaceName = preparer.businessName || preparer.name || 'your practice';
+  const unstartedCount = clients.filter((client) => client.status === 'not_started').length;
+  const visibleCountLabel = loading
+    ? 'Loading live client data...'
+    : `Showing ${visibleClients.length} of ${stats.total} clients in ${workspaceName}`;
+  const activeCount = clients.filter((client) => client.status !== 'complete').length;
+  const waitingOnDocsCount = clients.filter(
+    (client) => client.status === 'in_progress' && client.docsPending.length > 0,
+  ).length;
+  const summaryItems = [
+    { label: 'Open files', value: activeCount, background: '#F5F8FF', border: '#DCE7FF', color: '#21449C' },
+    { label: 'Waiting on docs', value: waitingOnDocsCount, background: '#FFF8F0', border: '#F8D8AD', color: '#B45309' },
+    { label: 'Completed', value: stats.complete, background: '#F3FCF5', border: '#CDEDD5', color: '#1D7A46' },
+    { label: 'Need first touch', value: unstartedCount, background: '#FBF7FF', border: '#E9D9FE', color: '#7C3AED' },
+  ];
 
   if (error) {
     return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
-        <p style={{ color: '#EF4444', fontSize: 14 }}>{error}</p>
-        <button
-          onClick={() => { setLoading(true); setError(null); load(); }}
-          style={{ background: '#3B6FE8', color: 'white', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+      <div style={{ display: 'flex', minHeight: '100vh', background: '#F7F8FC', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div
+          className="overview-panel overview-enter"
+          style={{
+            width: '100%',
+            maxWidth: 460,
+            background: 'white',
+            borderRadius: 24,
+            border: '1px solid #E2E6F0',
+            padding: 28,
+            textAlign: 'center',
+            boxShadow: '0 18px 42px rgba(19, 36, 80, 0.06)',
+          }}
         >
-          Retry
-        </button>
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              margin: '0 auto',
+              borderRadius: 18,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#FFF1F2',
+              color: '#E11D48',
+            }}
+          >
+            <TriangleAlert size={24} />
+          </div>
+          <div style={{ marginTop: 16, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>
+            Dashboard unavailable
+          </div>
+          <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.6, color: '#6B7280' }}>
+            {error}
+          </p>
+          <button
+            type="button"
+            className="overview-button"
+            onClick={() => {
+              setLoading(true);
+              setError(null);
+              void load();
+            }}
+            style={{
+              marginTop: 18,
+              border: 'none',
+              background: '#21449C',
+              color: 'white',
+              borderRadius: 14,
+              padding: '11px 16px',
+              fontFamily: 'inherit',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
 
-  const statValueColor = (key: 'waiting' | 'complete' | 'issues', val: number) => {
-    if (key === 'waiting') return val > 0 ? '#F59E0B' : '#1A1A1A';
-    if (key === 'complete') return val > 0 ? '#22C55E' : '#1A1A1A';
-    if (key === 'issues') return val > 0 ? '#EF4444' : '#6B7280';
-    return '#1A1A1A';
-  };
-
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F7F8FC' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#F7F8FC' }}>
       <Sidebar
         preparerId={preparerId ?? ''}
         preparerName={preparer.name}
@@ -261,172 +496,281 @@ export default function Dashboard() {
         activeNav="Clients"
       />
 
-      {/* Main scrollable area */}
-      <div style={{ flex: 1, marginLeft: 240, overflow: 'auto', padding: 20 }}>
-        {/* White card */}
-        <div style={{ background: 'white', borderRadius: 10, border: '1px solid #E2E6F0', overflow: 'hidden' }}>
-
-          {/* Page header */}
-          <div style={{ padding: '28px 32px 24px', borderBottom: '1px solid #E2E6F0', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: '#1A1A1A', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
-                Clients
+      <div className="dashboard-page" style={{ flex: 1, marginLeft: 240, padding: 24 }}>
+        <div className="dashboard-shell" style={{ maxWidth: 1320, margin: '0 auto', display: 'grid', gap: 20 }}>
+          <section
+            className="overview-panel overview-enter dashboard-main-panel"
+            style={{
+              background: 'white',
+              borderRadius: 28,
+              border: '1px solid #E2E6F0',
+              padding: 20,
+              boxShadow: '0 18px 42px rgba(19, 36, 80, 0.06)',
+            }}
+          >
+            <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div className="dashboard-header-copy" style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: '#132450' }}>
+                    Clients
+                  </div>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: 34,
+                      height: 26,
+                      padding: '0 10px',
+                      borderRadius: 999,
+                      background: '#EEF2FF',
+                      color: '#21449C',
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {loading ? '—' : stats.total}
+                  </span>
+                </div>
+                <div style={{ marginTop: 7, fontSize: 13, color: '#6B7280' }}>
+                  {visibleCountLabel}
+                </div>
               </div>
-              <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 5, fontWeight: 400 }}>
-                {loading ? 'Loading…' : `${stats.total} client${stats.total === 1 ? '' : 's'} in ${workspaceName}`}
+
+              <div className="dashboard-header-actions" style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <div className="dashboard-search" style={{ position: 'relative', minWidth: 0 }}>
+                  <Search
+                    size={14}
+                    style={{
+                      position: 'absolute',
+                      left: 14,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#9CA3AF',
+                    }}
+                  />
+                  <input
+                    className="overview-field"
+                    type="text"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search clients"
+                    style={{
+                      width: 248,
+                      paddingLeft: 38,
+                      paddingRight: 14,
+                      paddingTop: 11,
+                      paddingBottom: 11,
+                      fontSize: 13,
+                      border: '1px solid #D9E3F3',
+                      borderRadius: 14,
+                      outline: 'none',
+                      fontFamily: 'inherit',
+                      boxSizing: 'border-box',
+                      color: '#1A1A1A',
+                      background: '#FBFCFF',
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="overview-button dashboard-add-button"
+                  onClick={() => setShowModal(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    height: 44,
+                    border: 'none',
+                    background: '#21449C',
+                    color: 'white',
+                    borderRadius: 14,
+                    padding: '0 16px',
+                    fontFamily: 'inherit',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Plus size={15} />
+                  Add Client
+                </button>
               </div>
             </div>
-            <button
-              onClick={() => setShowModal(true)}
-              style={{
-                background: '#3B6FE8', color: 'white', border: 'none', borderRadius: 7,
-                padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'inherit',
-                transition: 'background 150ms', letterSpacing: '-0.01em',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#2E5ED4')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = '#3B6FE8')}
-            >
-              <Plus size={14} /> Add Client
-            </button>
-          </div>
 
-          {/* Stats row */}
-          <div style={{ display: 'flex', borderBottom: '1px solid #E2E6F0' }}>
-            {([
-              { label: 'Total Clients',  value: stats.total,    key: null,       accent: '#3B6FE8', accentBg: '#EEF2FF' },
-              { label: 'Waiting on Docs', value: stats.waiting, key: 'waiting',  accent: '#F59E0B', accentBg: '#FFF7ED' },
-              { label: 'Complete',        value: stats.complete, key: 'complete', accent: '#22C55E', accentBg: '#F0FDF4' },
-              { label: 'Issues',          value: stats.issues,  key: 'issues',   accent: '#EF4444', accentBg: '#FEF2F2' },
-            ] as Array<{ label: string; value: number; key: 'waiting' | 'complete' | 'issues' | null; accent: string; accentBg: string }>).map((s, i, arr) => {
-              const isActive = s.value > 0;
-              const numColor = s.key ? (isActive ? statValueColor(s.key, s.value) : '#1A1A1A') : '#1A1A1A';
-              return (
-                <div key={s.label} style={{
-                  flex: 1,
-                  padding: '24px 32px',
-                  borderRight: i < arr.length - 1 ? '1px solid #E2E6F0' : 'none',
-                  display: 'flex', flexDirection: 'column', gap: 10,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#9CA3AF' }}>
-                      {s.label}
-                    </div>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: 7,
-                      background: isActive || s.key === null ? s.accentBg : '#F7F8FC',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'background 200ms',
-                    }}>
-                      <div style={{
-                        width: 8, height: 8, borderRadius: '50%',
-                        background: isActive || s.key === null ? s.accent : '#D1D5DB',
-                        transition: 'background 200ms',
-                      }} />
+            <div className="dashboard-summary-strip" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginTop: 18 }}>
+              {summaryItems.map((item) => (
+                <div
+                  key={item.label}
+                  className="overview-chip dashboard-summary-chip"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 14,
+                    padding: '12px 14px',
+                    borderRadius: 16,
+                    border: `1px solid ${item.border}`,
+                    background: item.background,
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#8B97B0' }}>
+                      {item.label}
                     </div>
                   </div>
-                  <div style={{ fontSize: 32, fontWeight: 700, color: numColor, lineHeight: 1, letterSpacing: '-0.02em' }}>
-                    {loading
-                      ? <div style={{ width: 40, height: 30, background: '#F7F8FC', borderRadius: 5 }} />
-                      : s.value}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 400 }}>
-                    {s.key === null && 'enrolled this season'}
-                    {s.key === 'waiting' && (isActive ? `${s.value} need${s.value === 1 ? 's' : ''} follow-up` : 'all caught up')}
-                    {s.key === 'complete' && (isActive ? `${Math.round((s.value / Math.max(stats.total, 1)) * 100)}% done` : 'none finished yet')}
-                    {s.key === 'issues' && (isActive ? 'Drive sync failed' : 'no issues')}
+                  <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em', color: item.color }}>
+                    {loading ? '—' : item.value}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Toolbar */}
-          <div style={{ padding: '12px 32px', borderBottom: '1px solid #E2E6F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>All clients</span>
-              <span style={{ background: '#EEF2FF', color: '#3B6FE8', fontSize: 11, fontWeight: 700, borderRadius: 9999, padding: '2px 8px' }}>
-                {loading ? '—' : filtered.length}
-              </span>
+              ))}
             </div>
-            <div style={{ position: 'relative' }}>
-              <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search clients..."
-                style={{
-                  width: 220, paddingLeft: 30, paddingRight: 12, paddingTop: 7, paddingBottom: 7,
-                  fontSize: 13, border: '1px solid #E2E6F0', borderRadius: 6, outline: 'none',
-                  fontFamily: 'inherit', boxSizing: 'border-box', color: '#1A1A1A',
-                }}
-                onFocus={(e) => (e.target.style.borderColor = '#3B6FE8')}
-                onBlur={(e) => (e.target.style.borderColor = '#E2E6F0')}
-              />
-            </div>
-          </div>
 
-          {/* Table header */}
-          <div style={{
-            display: 'flex', alignItems: 'center', padding: '0 32px', height: 36,
-            background: '#F7F8FC', borderBottom: '1px solid #E2E6F0',
-          }}>
-            {[
-              { label: 'CLIENT', flex: 2.5 },
-              { label: 'STATUS', flex: 1 },
-              { label: 'DOCS', flex: 1 },
-              { label: 'WAITING ON', flex: 2 },
-              { label: 'LAST REPLY', flex: 1.5 },
-              { label: 'ACTION', flex: 1, align: 'right' as const },
-            ].map(({ label, flex, align }) => (
-              <div
-                key={label}
-                style={{
-                  flex, fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
-                  letterSpacing: '0.06em', color: '#6B7280',
-                  textAlign: align ?? 'left',
-                }}
-              >
-                {label}
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid #EEF2F8' }}>
+              <div className="dashboard-list-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#132450' }}>Client list</div>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: 32,
+                      height: 24,
+                      padding: '0 8px',
+                      borderRadius: 999,
+                      background: '#EEF2FF',
+                      color: '#21449C',
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {loading ? '—' : visibleClients.length}
+                  </span>
+                </div>
+                {searchLower && (
+                  <div style={{ fontSize: 12, color: '#8B97B0' }}>
+                    Filtered results
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
 
-          {/* Table body */}
-          {loading ? (
-            Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
-          ) : filtered.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: 0 }}>
-              <Users size={36} color="#E2E6F0" />
-              <div style={{ fontSize: 15, fontWeight: 600, color: '#1A1A1A', marginTop: 12 }}>No clients yet</div>
-              <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 4 }}>Add your first client to get started</div>
-              <button
-                onClick={() => setShowModal(true)}
-                style={{
-                  marginTop: 16, background: '#3B6FE8', color: 'white', border: 'none',
-                  borderRadius: 6, padding: '7px 14px', fontSize: 13, fontWeight: 600,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-                  fontFamily: 'inherit',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#2E5ED4')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = '#3B6FE8')}
-              >
-                <Plus size={14} /> Add Client
-              </button>
+              <div className="dashboard-table-shell" style={{ marginTop: 18, overflowX: 'auto' }}>
+                <div style={{ minWidth: 1020, display: 'grid', gap: 10 }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: TABLE_COLUMNS,
+                      gap: 14,
+                      alignItems: 'center',
+                      padding: '0 18px',
+                      height: 34,
+                    }}
+                  >
+                    {[
+                      { label: 'Client', align: 'left' as const },
+                      { label: 'Status', align: 'left' as const },
+                      { label: 'Docs', align: 'left' as const },
+                      { label: 'Waiting On', align: 'left' as const },
+                      { label: 'Last Reply', align: 'left' as const },
+                      { label: 'Action', align: 'right' as const },
+                    ].map((column) => (
+                      <div
+                        key={column.label}
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.08em',
+                          color: '#8B97B0',
+                          textAlign: column.align,
+                        }}
+                      >
+                        {column.label}
+                      </div>
+                    ))}
+                  </div>
+
+                  {loading ? (
+                    Array.from({ length: 8 }).map((_, index) => <SkeletonRow key={index} />)
+                  ) : visibleClients.length === 0 ? (
+                    <div
+                      className="overview-subpanel"
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '64px 24px',
+                        borderRadius: 24,
+                        border: '1px dashed #D9E3F3',
+                        background: '#FBFCFF',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 58,
+                          height: 58,
+                          borderRadius: 20,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: '#EEF2FF',
+                          color: '#21449C',
+                        }}
+                      >
+                        <Users size={28} />
+                      </div>
+                      <div style={{ marginTop: 16, fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                        No matching clients
+                      </div>
+                      <div style={{ marginTop: 8, fontSize: 13, color: '#6B7280' }}>
+                        {searchLower ? 'Try a different name or phone number.' : 'Add your first client to start the pipeline.'}
+                      </div>
+                      {!searchLower && (
+                        <button
+                          type="button"
+                          className="overview-button"
+                          onClick={() => setShowModal(true)}
+                          style={{
+                            marginTop: 18,
+                            border: 'none',
+                            background: '#21449C',
+                            color: 'white',
+                            borderRadius: 14,
+                            padding: '11px 16px',
+                            fontFamily: 'inherit',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 8,
+                          }}
+                        >
+                          <Plus size={14} />
+                          Add Client
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    visibleClients.map((client) => (
+                      <ClientRow
+                        key={client.id}
+                        client={client}
+                        preparerId={preparerId ?? ''}
+                        onSendRequest={handleSendRequest}
+                        onSendReminder={handleSendReminder}
+                        actionLoading={loadingActions.has(client.id)}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
-          ) : (
-            [DEMO_CLIENT, ...filtered].map((client) => (
-              <ClientRow
-                key={client.id}
-                client={client}
-                preparerId={preparerId ?? ''}
-                onSendRequest={handleSendRequest}
-                onSendReminder={handleSendReminder}
-                actionLoading={loadingActions.has(client.id)}
-              />
-            ))
-          )}
+          </section>
         </div>
       </div>
 

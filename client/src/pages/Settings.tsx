@@ -6,18 +6,29 @@ import {
   Building2,
   Clock3,
   ExternalLink,
+  Globe,
   HardDrive,
+  Image as ImageIcon,
+  Instagram,
+  Linkedin,
   Mail,
+  Palette,
   Phone,
   QrCode,
+  Quote,
   Save,
 } from 'lucide-react';
+import logo from '../../../src/assets/logo.png';
 import { getPreparerSettings, updatePreparerSettings } from '../api';
 import type { PreparerSettingsData } from '../types';
 import Sidebar from '../components/Sidebar';
 import { ToastContainer, toast } from '../components/Toast';
 
 const FOLLOWUP_OPTIONS = [24, 48, 72, 96];
+
+function getPreviewColor(color: string): string {
+  return /^#[0-9A-Fa-f]{6}$/.test(color.trim()) ? color.trim().toUpperCase() : '#3B6FE8';
+}
 
 function DetailCard({
   icon,
@@ -80,6 +91,12 @@ export default function Settings() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     businessName: '',
+    brandColor: '',
+    brandTagline: '',
+    brandLogoUrl: '',
+    websiteUrl: '',
+    instagramUrl: '',
+    linkedinUrl: '',
     autoFollowupEnabled: true,
     autoFollowupHours: 48,
   });
@@ -93,6 +110,12 @@ export default function Settings() {
         setData(response);
         setForm({
           businessName: response.preparer.businessName,
+          brandColor: response.preparer.branding.color ?? '',
+          brandTagline: response.preparer.branding.tagline ?? '',
+          brandLogoUrl: response.preparer.branding.logoUrl ?? '',
+          websiteUrl: response.preparer.branding.websiteUrl ?? '',
+          instagramUrl: response.preparer.branding.instagramUrl ?? '',
+          linkedinUrl: response.preparer.branding.linkedinUrl ?? '',
           autoFollowupEnabled: response.preparer.autoFollowupEnabled,
           autoFollowupHours: response.preparer.autoFollowupHours,
         });
@@ -111,17 +134,46 @@ export default function Settings() {
     autoFollowupHours: 48,
     twilioNumber: null,
     driveConnected: false,
+    branding: {
+      color: null,
+      tagline: null,
+      logoUrl: null,
+      websiteUrl: null,
+      instagramUrl: null,
+      linkedinUrl: null,
+    },
   };
 
   const trimmedBusinessName = form.businessName.trim();
+  const trimmedBrandColor = form.brandColor.trim();
+  const trimmedBrandTagline = form.brandTagline.trim();
+  const trimmedBrandLogoUrl = form.brandLogoUrl.trim();
+  const trimmedWebsiteUrl = form.websiteUrl.trim();
+  const trimmedInstagramUrl = form.instagramUrl.trim();
+  const trimmedLinkedinUrl = form.linkedinUrl.trim();
   const hasChanges = Boolean(
     data &&
     (
       trimmedBusinessName !== data.preparer.businessName ||
+      trimmedBrandColor !== (data.preparer.branding.color ?? '') ||
+      trimmedBrandTagline !== (data.preparer.branding.tagline ?? '') ||
+      trimmedBrandLogoUrl !== (data.preparer.branding.logoUrl ?? '') ||
+      trimmedWebsiteUrl !== (data.preparer.branding.websiteUrl ?? '') ||
+      trimmedInstagramUrl !== (data.preparer.branding.instagramUrl ?? '') ||
+      trimmedLinkedinUrl !== (data.preparer.branding.linkedinUrl ?? '') ||
       form.autoFollowupEnabled !== data.preparer.autoFollowupEnabled ||
       form.autoFollowupHours !== data.preparer.autoFollowupHours
     )
   );
+
+  const previewColor = getPreviewColor(trimmedBrandColor);
+  const previewTagline = trimmedBrandTagline || 'Modern, simple document collection for busy clients.';
+  const previewLogoUrl = trimmedBrandLogoUrl || logo;
+  const previewLinks = [
+    { label: 'Website', value: trimmedWebsiteUrl, icon: <Globe size={14} /> },
+    { label: 'Instagram', value: trimmedInstagramUrl, icon: <Instagram size={14} /> },
+    { label: 'LinkedIn', value: trimmedLinkedinUrl, icon: <Linkedin size={14} /> },
+  ].filter((item) => item.value);
 
   async function handleSave(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -131,12 +183,24 @@ export default function Settings() {
     try {
       const updated = await updatePreparerSettings(preparerId, {
         businessName: trimmedBusinessName,
+        brandColor: trimmedBrandColor,
+        brandTagline: trimmedBrandTagline,
+        brandLogoUrl: trimmedBrandLogoUrl,
+        websiteUrl: trimmedWebsiteUrl,
+        instagramUrl: trimmedInstagramUrl,
+        linkedinUrl: trimmedLinkedinUrl,
         autoFollowupEnabled: form.autoFollowupEnabled,
         autoFollowupHours: form.autoFollowupHours,
       });
       setData(updated);
       setForm({
         businessName: updated.preparer.businessName,
+        brandColor: updated.preparer.branding.color ?? '',
+        brandTagline: updated.preparer.branding.tagline ?? '',
+        brandLogoUrl: updated.preparer.branding.logoUrl ?? '',
+        websiteUrl: updated.preparer.branding.websiteUrl ?? '',
+        instagramUrl: updated.preparer.branding.instagramUrl ?? '',
+        linkedinUrl: updated.preparer.branding.linkedinUrl ?? '',
         autoFollowupEnabled: updated.preparer.autoFollowupEnabled,
         autoFollowupHours: updated.preparer.autoFollowupHours,
       });
@@ -269,6 +333,183 @@ export default function Settings() {
                     }}
                   />
                 </label>
+              </div>
+
+              <div style={{
+                border: '1px solid #E2E6F0',
+                borderRadius: 12,
+                padding: 22,
+                background: '#FCFCFD',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                  <Palette size={18} color="#3B6FE8" />
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>Brand kit</div>
+                    <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 3 }}>
+                      These fields shape your public QR and signup pages. Leave any field blank to use the TaxPing placeholder treatment.
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                  <label style={{ display: 'block' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 8 }}>
+                      Brand color
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <Palette size={15} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+                      <input
+                        type="text"
+                        value={form.brandColor}
+                        onChange={(e) => setForm((prev) => ({ ...prev, brandColor: e.target.value }))}
+                        placeholder="#2E5ED4"
+                        style={{
+                          width: '100%',
+                          border: '1px solid #D7DCE8',
+                          borderRadius: 10,
+                          padding: '12px 14px 12px 38px',
+                          fontSize: 15,
+                          color: '#1A1A1A',
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  </label>
+
+                  <label style={{ display: 'block' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 8 }}>
+                      Logo URL
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <ImageIcon size={15} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+                      <input
+                        type="url"
+                        value={form.brandLogoUrl}
+                        onChange={(e) => setForm((prev) => ({ ...prev, brandLogoUrl: e.target.value }))}
+                        placeholder="https://..."
+                        style={{
+                          width: '100%',
+                          border: '1px solid #D7DCE8',
+                          borderRadius: 10,
+                          padding: '12px 14px 12px 38px',
+                          fontSize: 15,
+                          color: '#1A1A1A',
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  </label>
+                </div>
+
+                <label style={{ display: 'block', marginTop: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 8 }}>
+                    Brand tagline
+                  </div>
+                  <div style={{ position: 'relative' }}>
+                    <Quote size={15} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: 14 }} />
+                    <input
+                      type="text"
+                      value={form.brandTagline}
+                      onChange={(e) => setForm((prev) => ({ ...prev, brandTagline: e.target.value }))}
+                      placeholder="Fast, calm filing for busy clients"
+                      style={{
+                        width: '100%',
+                        border: '1px solid #D7DCE8',
+                        borderRadius: 10,
+                        padding: '12px 14px 12px 38px',
+                        fontSize: 15,
+                        color: '#1A1A1A',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginTop: 14 }}>
+                  <label style={{ display: 'block' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 8 }}>
+                      Website
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <Globe size={15} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+                      <input
+                        type="url"
+                        value={form.websiteUrl}
+                        onChange={(e) => setForm((prev) => ({ ...prev, websiteUrl: e.target.value }))}
+                        placeholder="https://yourfirm.com"
+                        style={{
+                          width: '100%',
+                          border: '1px solid #D7DCE8',
+                          borderRadius: 10,
+                          padding: '12px 14px 12px 38px',
+                          fontSize: 15,
+                          color: '#1A1A1A',
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  </label>
+
+                  <label style={{ display: 'block' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 8 }}>
+                      Instagram
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <Instagram size={15} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+                      <input
+                        type="url"
+                        value={form.instagramUrl}
+                        onChange={(e) => setForm((prev) => ({ ...prev, instagramUrl: e.target.value }))}
+                        placeholder="https://instagram.com/yourfirm"
+                        style={{
+                          width: '100%',
+                          border: '1px solid #D7DCE8',
+                          borderRadius: 10,
+                          padding: '12px 14px 12px 38px',
+                          fontSize: 15,
+                          color: '#1A1A1A',
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  </label>
+
+                  <label style={{ display: 'block' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 8 }}>
+                      LinkedIn
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <Linkedin size={15} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+                      <input
+                        type="url"
+                        value={form.linkedinUrl}
+                        onChange={(e) => setForm((prev) => ({ ...prev, linkedinUrl: e.target.value }))}
+                        placeholder="https://linkedin.com/company/yourfirm"
+                        style={{
+                          width: '100%',
+                          border: '1px solid #D7DCE8',
+                          borderRadius: 10,
+                          padding: '12px 14px 12px 38px',
+                          fontSize: 15,
+                          color: '#1A1A1A',
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  </label>
+                </div>
               </div>
 
               <div style={{
@@ -431,6 +672,100 @@ export default function Settings() {
                     justifyContent: 'center',
                     color: '#3B6FE8',
                   }}>
+                    <Palette size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+                      Brand preview
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A', marginTop: 4 }}>
+                      Public page treatment
+                    </div>
+                  </div>
+                </div>
+                <div style={{
+                  borderRadius: 18,
+                  overflow: 'hidden',
+                  border: '1px solid #E2E8F0',
+                  background: '#0F172A',
+                  color: 'white',
+                }}>
+                  <div style={{
+                    padding: 18,
+                    background: `linear-gradient(135deg, ${previewColor} 0%, #0F172A 72%)`,
+                  }}>
+                    <div style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 16,
+                      background: 'rgba(255,255,255,0.92)',
+                      display: 'grid',
+                      placeItems: 'center',
+                      overflow: 'hidden',
+                    }}>
+                      <img
+                        src={previewLogoUrl}
+                        alt={`${trimmedBusinessName || 'TaxPing'} logo`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </div>
+                    <div style={{ marginTop: 14, fontSize: 20, fontWeight: 800, letterSpacing: '-0.03em' }}>
+                      {trimmedBusinessName || 'Your business'}
+                    </div>
+                    <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: 'rgba(255,255,255,0.88)' }}>
+                      {previewTagline}
+                    </div>
+                  </div>
+                  <div style={{ padding: 16, display: 'grid', gap: 10 }}>
+                    <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.6 }}>
+                      This is the styling your public signup and QR pages will inherit.
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {previewLinks.length > 0 ? previewLinks.map((item) => (
+                        <span
+                          key={item.label}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '8px 10px',
+                            borderRadius: 999,
+                            background: 'rgba(255,255,255,0.08)',
+                            fontSize: 12,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {item.icon} {item.label}
+                        </span>
+                      )) : (
+                        <span style={{ fontSize: 12, color: '#94A3B8' }}>
+                          Add website or social links to show branded footer chips here.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{
+                border: '1px solid #E2E6F0',
+                borderRadius: 12,
+                background: 'white',
+                padding: 18,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 14,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    background: '#EEF2FF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#3B6FE8',
+                  }}>
                     <QrCode size={16} />
                   </div>
                   <div>
@@ -479,6 +814,42 @@ export default function Settings() {
                     }}
                   >
                     <ExternalLink size={14} /> Open signup form
+                  </Link>
+                  <Link
+                    to="/public/demo/qr"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      background: '#F8FAFC',
+                      color: '#475569',
+                      textDecoration: 'none',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      border: '1px solid #E2E8F0',
+                    }}
+                  >
+                    <QrCode size={14} /> Open demo QR
+                  </Link>
+                  <Link
+                    to="/public/demo/signup"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      background: '#F8FAFC',
+                      color: '#475569',
+                      textDecoration: 'none',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      border: '1px solid #E2E8F0',
+                    }}
+                  >
+                    <ExternalLink size={14} /> Open demo signup
                   </Link>
                 </div>
               </div>
