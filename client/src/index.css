@@ -197,6 +197,15 @@ body {
     width: 100% !important;
   }
 
+  .dashboard-filter-select-wrap {
+    flex: 1 1 220px;
+    min-width: 0 !important;
+  }
+
+  .dashboard-filter-select {
+    width: 100%;
+  }
+
   .dashboard-summary-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
@@ -222,6 +231,21 @@ body {
 
   .dashboard-summary-strip {
     grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-filter-head,
+  .dashboard-filter-controls {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .dashboard-filter-reset {
+    width: 100%;
+  }
+
+  .dashboard-filter-chip {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 

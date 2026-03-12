@@ -3,6 +3,9 @@ import { Suspense, lazy } from 'react';
 import ClientProfile from './pages/ClientProfile';
 import Overview from './pages/Overview';
 import Settings from './pages/Settings';
+import Help from './pages/Help';
+import Messages from './pages/Messages';
+import Season from './pages/Season';
 import PublicQr from './pages/PublicQr';
 import PublicSignup from './pages/PublicSignup';
 import PublicLaunch from './pages/PublicLaunch';
@@ -84,6 +87,9 @@ export default function App() {
         />
         <Route path="/dashboard/:preparerId/client/:clientId" element={<ClientProfile />} />
         <Route path="/dashboard/:preparerId/settings" element={<Settings />} />
+        <Route path="/dashboard/:preparerId/help" element={<Help />} />
+        <Route path="/dashboard/:preparerId/messages" element={<Messages />} />
+        <Route path="/dashboard/:preparerId/season" element={<Season />} />
         <Route path="/public/:preparerId/qr" element={<PublicQr />} />
         <Route path="/public/:preparerId/signup" element={<PublicSignup />} />
         <Route path="/public/:preparerId/connect" element={<PublicLaunch />} />

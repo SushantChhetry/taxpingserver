@@ -34,6 +34,50 @@ const DEMO_CLIENT: Client = {
   taxYear: 2027,
 };
 
+const STALE_REPLY_WINDOW_MS = 72 * 60 * 60 * 1000;
+
+type WorkflowFilter = 'all' | 'first_touch' | 'waiting_on_docs' | 'follow_up_now' | 'ready_to_review';
+type StatusFilter = 'all' | Client['status'];
+
+const STATUS_FILTER_LABELS: Record<Client['status'], string> = {
+  not_started: 'Not started',
+  in_progress: 'In progress',
+  complete: 'Complete',
+};
+
+function needsFirstTouch(client: Client) {
+  return client.status === 'not_started';
+}
+
+function isWaitingOnDocs(client: Client) {
+  return client.status === 'in_progress' && client.docsPending.length > 0;
+}
+
+function isReadyToReview(client: Client) {
+  return client.docsCollected > 0 && client.docsPending.length === 0;
+}
+
+function needsFollowUpNow(client: Client, now: number) {
+  if (!isWaitingOnDocs(client)) return false;
+  if (!client.lastReplyAt) return true;
+  return now - new Date(client.lastReplyAt).getTime() > STALE_REPLY_WINDOW_MS;
+}
+
+function matchesWorkflowFilter(client: Client, workflowFilter: WorkflowFilter, now: number) {
+  switch (workflowFilter) {
+    case 'first_touch':
+      return needsFirstTouch(client);
+    case 'waiting_on_docs':
+      return isWaitingOnDocs(client);
+    case 'follow_up_now':
+      return needsFollowUpNow(client, now);
+    case 'ready_to_review':
+      return isReadyToReview(client);
+    default:
+      return true;
+  }
+}
+
 function ActionButton({
   label,
   icon,
@@ -338,6 +382,9 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
+  const [workflowFilter, setWorkflowFilter] = useState<WorkflowFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [taxYearFilter, setTaxYearFilter] = useState<number | 'all'>('all');
   const [loadingActions, setLoadingActions] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
@@ -360,7 +407,8 @@ export default function Dashboard() {
   function setActionLoading(id: string, on: boolean) {
     setLoadingActions((current) => {
       const next = new Set(current);
-      on ? next.add(id) : next.delete(id);
+      if (on) next.add(id);
+      else next.delete(id);
       return next;
     });
   }
@@ -392,16 +440,62 @@ export default function Dashboard() {
   }, [load]);
 
   const clients = data?.clients ?? [];
+  const now = Date.now();
   const searchLower = search.trim().toLowerCase();
-  const filtered = clients.filter((client) =>
+  const matchesSearch = (client: Client) =>
+    searchLower === '' ||
     client.name.toLowerCase().includes(searchLower) ||
-    client.mobile.toLowerCase().includes(searchLower)
+    client.mobile.toLowerCase().includes(searchLower);
+  const matchesStatus = (client: Client) => statusFilter === 'all' || client.status === statusFilter;
+  const matchesTaxYear = (client: Client) => taxYearFilter === 'all' || client.taxYear === taxYearFilter;
+
+  const filterScopedClients = clients.filter(
+    (client) => matchesSearch(client) && matchesStatus(client) && matchesTaxYear(client),
   );
-  const demoMatches =
+  const filteredClients = filterScopedClients.filter((client) =>
+    matchesWorkflowFilter(client, workflowFilter, now),
+  );
+
+  const taxYearOptions = [...new Set(clients.map((client) => client.taxYear).filter((year): year is number => typeof year === 'number'))]
+    .sort((left, right) => right - left);
+
+  const workflowOptions: Array<{ value: WorkflowFilter; label: string; count: number }> = [
+    { value: 'all', label: 'All files', count: filterScopedClients.length },
+    { value: 'first_touch', label: 'Need first touch', count: filterScopedClients.filter(needsFirstTouch).length },
+    { value: 'waiting_on_docs', label: 'Waiting on docs', count: filterScopedClients.filter(isWaitingOnDocs).length },
+    { value: 'follow_up_now', label: 'Follow up now', count: filterScopedClients.filter((client) => needsFollowUpNow(client, now)).length },
+    { value: 'ready_to_review', label: 'Ready to review', count: filterScopedClients.filter(isReadyToReview).length },
+  ];
+
+  const hasActiveFilters =
+    searchLower !== '' ||
+    workflowFilter !== 'all' ||
+    statusFilter !== 'all' ||
+    taxYearFilter !== 'all';
+
+  const clearFilters = () => {
+    setSearch('');
+    setWorkflowFilter('all');
+    setStatusFilter('all');
+    setTaxYearFilter('all');
+  };
+
+  const demoMatchesSearch =
     searchLower === '' ||
     DEMO_CLIENT.name.toLowerCase().includes(searchLower) ||
     DEMO_CLIENT.mobile.toLowerCase().includes(searchLower);
-  const visibleClients = demoMatches ? [DEMO_CLIENT, ...filtered] : filtered;
+  const demoMatchesFilters =
+    matchesWorkflowFilter(DEMO_CLIENT, workflowFilter, now) &&
+    (statusFilter === 'all' || DEMO_CLIENT.status === statusFilter) &&
+    (taxYearFilter === 'all' || DEMO_CLIENT.taxYear === taxYearFilter);
+  const showDemo =
+    (searchLower === '' &&
+      workflowFilter === 'all' &&
+      statusFilter === 'all' &&
+      taxYearFilter === 'all') ||
+    (searchLower !== '' && demoMatchesSearch && demoMatchesFilters);
+  const visibleClients = showDemo ? [DEMO_CLIENT, ...filteredClients] : filteredClients;
+  const visibleLiveCount = filteredClients.length;
 
   const { stats } = data ?? { stats: { total: 0, waiting: 0, complete: 0, issues: 0 } };
   const preparer = data?.preparer ?? { id: '', name: '', email: '', businessName: '' };
@@ -409,11 +503,17 @@ export default function Dashboard() {
   const unstartedCount = clients.filter((client) => client.status === 'not_started').length;
   const visibleCountLabel = loading
     ? 'Loading live client data...'
-    : `Showing ${visibleClients.length} of ${stats.total} clients in ${workspaceName}`;
+    : `Showing ${visibleLiveCount} of ${stats.total} live clients in ${workspaceName}${showDemo ? ' plus 1 demo client' : ''}`;
   const activeCount = clients.filter((client) => client.status !== 'complete').length;
   const waitingOnDocsCount = clients.filter(
     (client) => client.status === 'in_progress' && client.docsPending.length > 0,
   ).length;
+  const activeFilterCount = [
+    searchLower !== '',
+    workflowFilter !== 'all',
+    statusFilter !== 'all',
+    taxYearFilter !== 'all',
+  ].filter(Boolean).length;
   const summaryItems = [
     { label: 'Open files', value: activeCount, background: '#F5F8FF', border: '#DCE7FF', color: '#21449C' },
     { label: 'Waiting on docs', value: waitingOnDocsCount, background: '#FFF8F0', border: '#F8D8AD', color: '#B45309' },
@@ -629,6 +729,166 @@ export default function Dashboard() {
             </div>
 
             <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid #EEF2F8' }}>
+              <div
+                className="dashboard-filter-panel"
+                style={{
+                  display: 'grid',
+                  gap: 14,
+                  padding: 16,
+                  borderRadius: 20,
+                  border: '1px solid #E4ECF8',
+                  background: 'linear-gradient(180deg, #FBFCFF 0%, #F7FAFF 100%)',
+                }}
+              >
+                <div className="dashboard-filter-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#8B97B0' }}>
+                      Workflow filters
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 13, color: '#6B7280' }}>
+                      Move between first touches, doc follow-ups, and review-ready files.
+                    </div>
+                  </div>
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      className="overview-button dashboard-filter-reset"
+                      onClick={clearFilters}
+                      style={{
+                        border: '1px solid #D7E1F1',
+                        background: 'white',
+                        color: '#21449C',
+                        borderRadius: 12,
+                        padding: '8px 12px',
+                        fontFamily: 'inherit',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+
+                <div className="dashboard-filter-chips" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {workflowOptions.map((option) => {
+                    const selected = workflowFilter === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className="overview-chip dashboard-filter-chip"
+                        aria-pressed={selected}
+                        onClick={() => setWorkflowFilter(option.value)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          minHeight: 42,
+                          padding: '8px 12px',
+                          borderRadius: 14,
+                          border: `1px solid ${selected ? '#B7CBFF' : '#DCE5F4'}`,
+                          background: selected ? '#EAF1FF' : 'white',
+                          color: selected ? '#173C8A' : '#44516C',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        <span style={{ fontSize: 12, fontWeight: 700 }}>{option.label}</span>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: 24,
+                            height: 24,
+                            padding: '0 8px',
+                            borderRadius: 999,
+                            background: selected ? '#21449C' : '#F2F5FB',
+                            color: selected ? 'white' : '#6B7280',
+                            fontSize: 11,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {loading ? '—' : option.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="dashboard-filter-controls" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'end' }}>
+                  <label className="dashboard-filter-select-wrap" style={{ display: 'grid', gap: 6, minWidth: 180 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#8B97B0' }}>
+                      Status
+                    </span>
+                    <select
+                      value={statusFilter}
+                      onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+                      className="overview-field dashboard-filter-select"
+                      style={{
+                        minHeight: 42,
+                        border: '1px solid #D9E3F3',
+                        borderRadius: 14,
+                        padding: '0 38px 0 14px',
+                        fontFamily: 'inherit',
+                        fontSize: 13,
+                        color: '#1A1A1A',
+                        backgroundColor: 'white',
+                        appearance: 'none',
+                        backgroundImage:
+                          'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%236B7280\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E")',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 14px center',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="all">All statuses</option>
+                      <option value="not_started">{STATUS_FILTER_LABELS.not_started}</option>
+                      <option value="in_progress">{STATUS_FILTER_LABELS.in_progress}</option>
+                      <option value="complete">{STATUS_FILTER_LABELS.complete}</option>
+                    </select>
+                  </label>
+
+                  <label className="dashboard-filter-select-wrap" style={{ display: 'grid', gap: 6, minWidth: 160 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#8B97B0' }}>
+                      Tax year
+                    </span>
+                    <select
+                      value={taxYearFilter === 'all' ? 'all' : String(taxYearFilter)}
+                      onChange={(event) =>
+                        setTaxYearFilter(event.target.value === 'all' ? 'all' : Number(event.target.value))
+                      }
+                      className="overview-field dashboard-filter-select"
+                      style={{
+                        minHeight: 42,
+                        border: '1px solid #D9E3F3',
+                        borderRadius: 14,
+                        padding: '0 38px 0 14px',
+                        fontFamily: 'inherit',
+                        fontSize: 13,
+                        color: '#1A1A1A',
+                        backgroundColor: 'white',
+                        appearance: 'none',
+                        backgroundImage:
+                          'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%236B7280\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E")',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 14px center',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="all">All years</option>
+                      {taxYearOptions.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+
               <div className="dashboard-list-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#132450' }}>Client list</div>
@@ -650,9 +910,9 @@ export default function Dashboard() {
                     {loading ? '—' : visibleClients.length}
                   </span>
                 </div>
-                {searchLower && (
+                {hasActiveFilters && (
                   <div style={{ fontSize: 12, color: '#8B97B0' }}>
-                    Filtered results
+                    {activeFilterCount} filter{activeFilterCount === 1 ? '' : 's'} active
                   </div>
                 )}
               </div>
@@ -727,9 +987,31 @@ export default function Dashboard() {
                         No matching clients
                       </div>
                       <div style={{ marginTop: 8, fontSize: 13, color: '#6B7280' }}>
-                        {searchLower ? 'Try a different name or phone number.' : 'Add your first client to start the pipeline.'}
+                        {hasActiveFilters
+                          ? 'Broaden the filters or clear them to bring more client files back into view.'
+                          : 'Add your first client to start the pipeline.'}
                       </div>
-                      {!searchLower && (
+                      {hasActiveFilters ? (
+                        <button
+                          type="button"
+                          className="overview-button"
+                          onClick={clearFilters}
+                          style={{
+                            marginTop: 18,
+                            border: '1px solid #D7E1F1',
+                            background: 'white',
+                            color: '#21449C',
+                            borderRadius: 14,
+                            padding: '11px 16px',
+                            fontFamily: 'inherit',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Clear filters
+                        </button>
+                      ) : (
                         <button
                           type="button"
                           className="overview-button"

@@ -119,13 +119,13 @@ export default function Sidebar({
       <nav style={{ flex: 1, padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <NavItem icon={<LayoutDashboard size={15} />} label="Overview" active={activeNav === 'Overview'} to={`/dashboard/${preparerId}/overview`} />
         <NavItem icon={<Users size={15} />} label="Clients" active={activeNav === 'Clients'} to={`/dashboard/${preparerId}`} />
-        <NavItem icon={<Inbox size={15} />} label="Messages" active={activeNav === 'Messages'} />
-        <NavItem icon={<Calendar size={15} />} label="Season" active={activeNav === 'Season'} />
+        <NavItem icon={<Inbox size={15} />} label="Messages" active={activeNav === 'Messages'} to={`/dashboard/${preparerId}/messages`} />
+        <NavItem icon={<Calendar size={15} />} label="Season" active={activeNav === 'Season'} to={`/dashboard/${preparerId}/season`} />
       </nav>
 
       <div style={{ padding: '12px 16px', borderTop: '1px solid #E2E6F0' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 12 }}>
-          <NavItem icon={<HelpCircle size={15} />} label="Help" />
+          <NavItem icon={<HelpCircle size={15} />} label="Help" active={activeNav === 'Help'} to={`/dashboard/${preparerId}/help`} />
           <NavItem icon={<Settings size={15} />} label="Settings" active={activeNav === 'Settings'} to={`/dashboard/${preparerId}/settings`} />
         </div>
         <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 12 }}>

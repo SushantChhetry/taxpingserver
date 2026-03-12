@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Copy, Download, ExternalLink, MessageSquareText, QrCode, Smartphone } from 'lucide-react';
+import {
+  Copy,
+  Download,
+  ExternalLink,
+  Globe,
+  Instagram,
+  Linkedin,
+  Phone,
+  QrCode,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
 import logo from '../../../src/assets/logo.png';
 import { getPublicPreparer } from '../api';
 import PublicIntakeShell from '../components/PublicIntakeShell';
@@ -13,6 +24,8 @@ import {
   buildSignupUrl,
   formatPhoneForDisplay,
   getBrandColor,
+  getBrandLinks,
+  getBrandTint,
   isDemoPreparerId,
 } from '../utils/publicIntake';
 
@@ -57,8 +70,28 @@ export default function PublicQr() {
   const businessName = data?.preparer.businessName ?? 'TaxPing';
   const phoneDisplay = formatPhoneForDisplay(data?.preparer.twilioNumber ?? null);
   const brandColor = getBrandColor(data?.preparer.branding.color);
+  const brandTint = getBrandTint(brandColor, '18');
   const logoSrc = data?.preparer.branding.logoUrl || logo;
+  const brandTagline =
+    data?.preparer.branding.tagline?.trim() ||
+    'Simple tax document collection that still looks like your firm.';
+  const brandLinks = getBrandLinks(
+    data?.preparer.branding ?? {
+      color: null,
+      tagline: null,
+      logoUrl: null,
+      websiteUrl: null,
+      instagramUrl: null,
+      linkedinUrl: null,
+    }
+  );
   const isReady = Boolean(data?.preparer.twilioNumber);
+
+  function renderBrandLinkIcon(kind: 'website' | 'instagram' | 'linkedin') {
+    if (kind === 'website') return <Globe size={14} />;
+    if (kind === 'instagram') return <Instagram size={14} />;
+    return <Linkedin size={14} />;
+  }
 
   async function handleCopySignupLink() {
     if (!signupUrl) return;
@@ -106,43 +139,160 @@ export default function PublicQr() {
             : 'Display this QR on a screen, at your desk, or in printed material. Scanning it opens a short handoff page that immediately tries to launch the client’s texting app so they can start the document thread.'
         }
         aside={
-          <>
-            <div className="public-enter public-enter-delay-2">
-              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#93C5FD' }}>
-                {isDemo ? 'Demo line' : 'Live line'}
+          <div style={{ display: 'grid', gap: 12, height: '100%', minHeight: 0, alignContent: 'space-between' }}>
+            <div
+              className="public-card public-sweep public-enter public-enter-delay-2"
+              style={{
+                borderRadius: 24,
+                padding: 18,
+                background: `linear-gradient(145deg, ${brandColor} 0%, #0F172A 76%)`,
+                border: '1px solid rgba(255,255,255,0.08)',
+                display: 'grid',
+                gap: 14,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <div
+                  className="public-logo-tile"
+                  style={{
+                    width: 62,
+                    height: 62,
+                    borderRadius: 18,
+                    background: 'rgba(255,255,255,0.96)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                  }}
+                >
+                  <img src={logoSrc} alt={`${businessName} logo`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div
+                  className="public-chip"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 10px',
+                    borderRadius: 999,
+                    background: 'rgba(255,255,255,0.14)',
+                    color: 'white',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Sparkles size={14} /> {isDemo ? 'Demo brand' : 'Brand view'}
+                </div>
               </div>
-              <div style={{ marginTop: 8, fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 800, letterSpacing: '-0.03em' }}>
-                {loading ? 'Loading…' : phoneDisplay}
+
+              <div>
+                <div style={{ fontSize: 'clamp(24px, 3vw, 30px)', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.03 }}>
+                  {businessName}
+                </div>
+                <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.58, color: 'rgba(255,255,255,0.88)' }}>
+                  {brandTagline}
+                </div>
               </div>
-              <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.55, color: '#CBD5E1' }}>
-                {isDemo
-                  ? `Clients still see the branded TaxPing flow with ${businessName}. Use this version when you need to demo the vision before a real texting line is connected.`
-                  : `Clients land in your branded TaxPing flow with ${businessName}. If they are on social instead of scanning, send them the public signup link below.`}
+
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {brandLinks.length > 0 ? brandLinks.map((item) => (
+                  <a
+                    key={item.label}
+                    className="public-chip"
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '8px 10px',
+                      borderRadius: 999,
+                      textDecoration: 'none',
+                      color: 'white',
+                      background: 'rgba(255,255,255,0.12)',
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {renderBrandLinkIcon(item.kind)}
+                    {item.label}
+                  </a>
+                )) : (
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.78)' }}>
+                    Add website or social links in Settings to show them here.
+                  </span>
+                )}
               </div>
             </div>
 
             <div style={{ display: 'grid', gap: 10 }}>
-              <div className="public-card public-enter public-enter-delay-3" style={{ borderRadius: 18, background: 'rgba(255,255,255,0.06)', padding: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div
+                className="public-card public-enter public-enter-delay-3"
+                style={{
+                  borderRadius: 18,
+                  background: 'rgba(255,255,255,0.06)',
+                  padding: 14,
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700 }}>
-                  <Smartphone size={16} color="#93C5FD" /> What scanning does
+                  <QrCode size={16} color="#93C5FD" />
+                  {isDemo ? 'Demo handoff' : 'Client handoff'}
                 </div>
-                <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.55, color: '#CBD5E1' }}>
-                  Opens a TaxPing launch page, detects mobile device behavior, and then pushes the client toward iMessage or SMS with a starter text ready to send.
+                <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.6, color: '#CBD5E1' }}>
+                  {isDemo
+                    ? 'The QR leads into the same branded texting handoff, but uses a safe demo number so you can present it without any live setup.'
+                    : 'This QR is the branded front door. Clients scan once and land in the text workflow without needing a portal account.'}
                 </div>
               </div>
 
-              <div className="public-card public-enter public-enter-delay-4" style={{ borderRadius: 18, background: 'rgba(255,255,255,0.06)', padding: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div
+                className="public-card public-enter public-enter-delay-4"
+                style={{
+                  borderRadius: 18,
+                  background: 'rgba(255,255,255,0.06)',
+                  padding: 14,
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700 }}>
-                  <MessageSquareText size={16} color="#93C5FD" /> Social fallback
+                  <Phone size={16} color="#93C5FD" />
+                  {isDemo ? 'Demo line' : 'Live line'}
+                </div>
+                <div style={{ marginTop: 6, fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em' }}>
+                  {loading ? 'Loading…' : phoneDisplay}
                 </div>
                 <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.55, color: '#CBD5E1' }}>
                   {isDemo
                     ? 'Pair this with the demo signup form when you want to show both entry points in a pitch or walkthrough.'
-                    : 'Share the signup form when a QR is inconvenient. That form texts the client directly after they submit their name and mobile number.'}
+                    : 'If clients come from social instead of a scan, share the signup page and keep the same brand treatment.'}
+                </div>
+              </div>
+
+              <div
+                className="public-card public-enter public-enter-delay-4"
+                style={{
+                  borderRadius: 18,
+                  background: brandTint,
+                  padding: 14,
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'white',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700 }}>
+                  <ShieldCheck size={16} />
+                  What the client feels
+                </div>
+                <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.6, color: 'rgba(255,255,255,0.88)' }}>
+                  A clean branded poster, one clear action, and a short handoff into Messages. This side should reinforce the firm's identity, not read like system copy.
                 </div>
               </div>
             </div>
-          </>
+          </div>
         }
       >
         <div style={{ display: 'grid', gap: 16, height: '100%', minHeight: 0, alignContent: 'space-between' }}>
