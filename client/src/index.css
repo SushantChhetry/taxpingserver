@@ -37,3 +37,120 @@ body {
   -webkit-font-smoothing: antialiased;
   margin: 0;
 }
+
+@keyframes overviewFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes overviewDrift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(0, -10px, 0) scale(1.04);
+  }
+}
+
+.overview-enter {
+  animation: overviewFadeUp 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.overview-enter-delay-1 {
+  animation-delay: 90ms;
+}
+
+.overview-enter-delay-2 {
+  animation-delay: 160ms;
+}
+
+.overview-enter-delay-3 {
+  animation-delay: 230ms;
+}
+
+.overview-panel,
+.overview-glass-card,
+.overview-chip,
+.overview-button,
+.overview-chat-bubble,
+.overview-subpanel,
+.overview-field {
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease,
+    background-color 220ms ease;
+}
+
+.overview-panel:hover,
+.overview-subpanel:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 28px 52px rgba(19, 36, 80, 0.12);
+  border-color: #D5DFF1;
+}
+
+.overview-glass-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 38px rgba(14, 29, 66, 0.16);
+}
+
+.overview-chip:hover,
+.overview-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(14, 29, 66, 0.14);
+}
+
+.overview-chat-bubble:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(23, 51, 109, 0.08);
+}
+
+.overview-field:focus {
+  border-color: #21449C !important;
+  box-shadow: 0 0 0 4px rgba(59, 111, 232, 0.12);
+}
+
+.overview-scroll-frame {
+  scroll-behavior: smooth;
+}
+
+.overview-hero-shell {
+  isolation: isolate;
+}
+
+.overview-orb {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(6px);
+  opacity: 0.9;
+  animation: overviewDrift 10s ease-in-out infinite;
+}
+
+.overview-orb-slow {
+  animation-duration: 14s;
+  animation-direction: reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview-enter,
+  .overview-panel,
+  .overview-glass-card,
+  .overview-chip,
+  .overview-button,
+  .overview-chat-bubble,
+  .overview-subpanel,
+  .overview-field,
+  .overview-orb {
+    animation: none !important;
+    transition: none !important;
+  }
+}

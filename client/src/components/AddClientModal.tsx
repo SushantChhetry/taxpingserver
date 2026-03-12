@@ -9,6 +9,9 @@ interface Props {
   onSuccess: () => void;
 }
 
+const DEFAULT_TAX_YEAR = new Date().getFullYear();
+const TAX_YEAR_OPTIONS = Array.from({ length: 5 }, (_, index) => DEFAULT_TAX_YEAR + 1 - index);
+
 function toE164(value: string): string | null {
   const digits = value.replace(/\D/g, '');
   if (digits.length === 10) return `+1${digits}`;
@@ -26,6 +29,7 @@ function formatPhone(value: string): string {
 export default function AddClientModal({ preparerId, onClose, onSuccess }: Props) {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
+  const [taxYear, setTaxYear] = useState(DEFAULT_TAX_YEAR);
   const [mobileError, setMobileError] = useState('');
   const [loading, setLoading] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -46,7 +50,7 @@ export default function AddClientModal({ preparerId, onClose, onSuccess }: Props
     if (!e164) { setMobileError('Valid US mobile number required'); return; }
     setLoading(true);
     try {
-      await createClient(preparerId, name.trim(), e164, 2027);
+      await createClient(preparerId, name.trim(), e164, taxYear);
       toast(`${name.trim()} added successfully`, 'success');
       onSuccess();
       onClose();
@@ -140,9 +144,30 @@ export default function AddClientModal({ preparerId, onClose, onSuccess }: Props
             {mobileError && <div style={{ fontSize: 11, color: '#EF4444', marginTop: 4 }}>{mobileError}</div>}
           </div>
 
-          {/* Tax year note */}
-          <div style={{ background: '#F7F8FC', border: '1px solid #E2E6F0', borderRadius: 6, padding: '8px 12px', fontSize: 12, color: '#6B7280' }}>
-            📅 Tax Year 2027
+          <div>
+            <label style={labelStyle}>Tax Year</label>
+            <select
+              value={taxYear}
+              onChange={(e) => setTaxYear(Number(e.target.value))}
+              style={{
+                ...inputStyle,
+                padding: '9px 12px',
+                appearance: 'none',
+                backgroundImage:
+                  'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%236B7280\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E")',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 12px center',
+                cursor: 'pointer',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#3B6FE8')}
+              onBlur={(e) => (e.target.style.borderColor = '#E2E6F0')}
+            >
+              {TAX_YEAR_OPTIONS.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Footer */}

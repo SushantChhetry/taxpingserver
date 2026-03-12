@@ -75,7 +75,7 @@ function buildReplyContext(
   employerName?: string
 ): ConversationContext {
   return {
-    preparerName: route.preparer.name,
+    preparerName: route.preparer.business_name?.trim() || route.preparer.name,
     clientName: route.client.name,
     docsCollected: route.conversation.docs_collected,
     docsPending: route.conversation.docs_pending,
@@ -114,15 +114,16 @@ async function step2_route(payload: TwilioPayload): Promise<RouteResult | null> 
 
   const client = await getClientByMobileAndPreparer(payload.from, preparer.id);
   if (!client) {
+    const sender = preparer.business_name?.trim() || preparer.name;
     const welcomeMsg =
-      `Hi! I'm ${preparer.name}'s tax assistant. ` +
+      `Hi! I'm the TaxPing assistant for ${sender}. ` +
       `I don't have you in our system yet. Reply with your full name to get started.`;
     await sendSMS({ to: payload.from, from: payload.to, body: welcomeMsg });
     await upsertPendingClient(payload.from, preparer.id);
     return null;
   }
 
-  const conversation = await getOrCreateConversation(client.id);
+  const conversation = await getOrCreateConversation(client.id, client.tax_year);
   if (conversation.status === 'complete') {
     await sendSMS({ to: payload.from, from: payload.to, body: 'We already have all your documents. Thanks!' });
     return null;
@@ -249,7 +250,12 @@ async function step7_drive(
   const folderId = await ensureClientFolder(preparer, client, conversation.id);
   if (!folderId) return null;
 
-  const fileName = formatFileName(client.name, classification.doc_type, 2027, payload.mimeType);
+  const fileName = formatFileName(
+    client.name,
+    classification.doc_type,
+    client.tax_year,
+    payload.mimeType
+  );
   const result = await writeFileToDrive({
     driveToken: preparer.drive_tokens!,
     parentFolderId: folderId,

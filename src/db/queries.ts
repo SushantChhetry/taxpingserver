@@ -1,14 +1,19 @@
 import { pool } from './client';
 import type { DriveTokens } from '../drive/auth';
 
+export const DEFAULT_TAX_YEAR = new Date().getFullYear();
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export type Preparer = {
   id: string;
   name: string;
   email: string;
+  business_name: string | null;
   drive_folder_id: string | null;
   drive_tokens: DriveTokens | null;
+  auto_followup_enabled: boolean;
+  auto_followup_hours: number;
   created_at: Date;
 };
 
@@ -38,6 +43,7 @@ export type ConversationWithClient = Conversation & { mobile: string };
 export type ConversationForFollowup = ConversationWithClient & {
   client_name: string;
   preparer_name: string;
+  preparer_business_name: string | null;
   preparer_twilio_number: string;
 };
 
@@ -72,6 +78,23 @@ export type ConversationStatus = {
   docs_pending: string[];
 };
 
+export type PreparerSettings = Pick<
+  Preparer,
+  | 'id'
+  | 'name'
+  | 'email'
+  | 'business_name'
+  | 'drive_folder_id'
+  | 'auto_followup_enabled'
+  | 'auto_followup_hours'
+> & {
+  twilio_number: string | null;
+};
+
+export type PublicPreparer = Pick<Preparer, 'id' | 'name' | 'business_name'> & {
+  twilio_number: string | null;
+};
+
 // ── Queries ──────────────────────────────────────────────────────────────────
 
 export async function getPreparerByTwilioNumber(
@@ -94,13 +117,43 @@ export async function getClientByMobileAndPreparer(
   preparerId: string
 ): Promise<Client | null> {
   const result = await pool.query<Client>(
+    `SELECT c.*
+     FROM clients c
+     LEFT JOIN LATERAL (
+       SELECT conv.id, conv.last_message_at
+       FROM conversations conv
+       WHERE conv.client_id = c.id
+         AND conv.tax_year = c.tax_year
+         AND conv.status = 'active'
+       ORDER BY conv.last_message_at DESC NULLS LAST
+       LIMIT 1
+     ) active_conv ON TRUE
+     WHERE c.mobile = $1
+       AND c.preparer_id = $2
+     ORDER BY
+       CASE WHEN active_conv.id IS NULL THEN 1 ELSE 0 END,
+       active_conv.last_message_at DESC NULLS LAST,
+       c.tax_year DESC,
+       c.created_at DESC
+     LIMIT 1`,
+    [mobile, preparerId]
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function getClientByMobileAndPreparerForTaxYear(
+  mobile: string,
+  preparerId: string,
+  taxYear: number
+): Promise<Client | null> {
+  const result = await pool.query<Client>(
     `SELECT *
      FROM clients
      WHERE mobile = $1
        AND preparer_id = $2
-       AND tax_year = 2027
+       AND tax_year = $3
      LIMIT 1`,
-    [mobile, preparerId]
+    [mobile, preparerId, taxYear]
   );
   return result.rows[0] ?? null;
 }
@@ -109,7 +162,7 @@ export async function createClient(
   preparerId: string,
   name: string,
   mobile: string,
-  taxYear: number = 2027
+  taxYear: number = DEFAULT_TAX_YEAR
 ): Promise<Client> {
   const result = await pool.query<Client>(
     `INSERT INTO clients (preparer_id, name, mobile, tax_year)
@@ -120,23 +173,26 @@ export async function createClient(
   return result.rows[0];
 }
 
-export async function getOrCreateConversation(clientId: string): Promise<Conversation> {
+export async function getOrCreateConversation(
+  clientId: string,
+  taxYear: number
+): Promise<Conversation> {
   const selectResult = await pool.query<Conversation>(
     `SELECT *
      FROM conversations
      WHERE client_id = $1
-       AND tax_year = 2027
+       AND tax_year = $2
        AND status = 'active'
      LIMIT 1`,
-    [clientId]
+    [clientId, taxYear]
   );
   if (selectResult.rows[0]) return selectResult.rows[0];
 
   const insertResult = await pool.query<Conversation>(
     `INSERT INTO conversations (client_id, tax_year, status, docs_collected, docs_pending, last_message_at)
-     VALUES ($1, 2027, 'active', '{}', '{}', NOW())
+     VALUES ($1, $2, 'active', '{}', '{}', NOW())
      RETURNING *`,
-    [clientId]
+    [clientId, taxYear]
   );
   return insertResult.rows[0];
 }
@@ -206,6 +262,73 @@ export async function updatePreparerDriveToken(
   );
 }
 
+export async function getPreparerSettings(
+  preparerId: string
+): Promise<PreparerSettings | null> {
+  const result = await pool.query<PreparerSettings>(
+    `SELECT p.id,
+            p.name,
+            p.email,
+            p.business_name,
+            p.drive_folder_id,
+            p.auto_followup_enabled,
+            p.auto_followup_hours,
+            pn.twilio_number
+     FROM preparers p
+     LEFT JOIN phone_numbers pn
+       ON pn.preparer_id = p.id
+      AND pn.active = TRUE
+     WHERE p.id = $1
+     LIMIT 1`,
+    [preparerId]
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function getPublicPreparer(preparerId: string): Promise<PublicPreparer | null> {
+  const result = await pool.query<PublicPreparer>(
+    `SELECT p.id,
+            p.name,
+            p.business_name,
+            pn.twilio_number
+     FROM preparers p
+     LEFT JOIN phone_numbers pn
+       ON pn.preparer_id = p.id
+      AND pn.active = TRUE
+     WHERE p.id = $1
+     LIMIT 1`,
+    [preparerId]
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function updatePreparerSettings(
+  preparerId: string,
+  input: {
+    businessName: string;
+    autoFollowupEnabled: boolean;
+    autoFollowupHours: number;
+  }
+): Promise<PreparerSettings | null> {
+  const updateResult = await pool.query<{ id: string }>(
+    `UPDATE preparers
+     SET business_name = $2,
+         auto_followup_enabled = $3,
+         auto_followup_hours = $4
+     WHERE id = $1
+     RETURNING id`,
+    [
+      preparerId,
+      input.businessName,
+      input.autoFollowupEnabled,
+      input.autoFollowupHours,
+    ]
+  );
+
+  if (!updateResult.rows[0]) return null;
+  return getPreparerSettings(preparerId);
+}
+
 export async function upsertPendingClient(
   mobile: string,
   preparerId: string
@@ -257,7 +380,7 @@ export async function getStaleConversations(
 }
 
 export async function getStaleConversationsForFollowup(
-  hoursOld: number
+  fallbackHours: number
 ): Promise<ConversationForFollowup[]> {
   const result = await pool.query<ConversationForFollowup>(
     `SELECT DISTINCT ON (c.id)
@@ -265,15 +388,17 @@ export async function getStaleConversationsForFollowup(
             cl.mobile,
             cl.name          AS client_name,
             p.name           AS preparer_name,
+            p.business_name  AS preparer_business_name,
             pn.twilio_number AS preparer_twilio_number
      FROM conversations c
      JOIN clients cl       ON cl.id = c.client_id
      JOIN preparers p      ON p.id  = cl.preparer_id
      JOIN phone_numbers pn ON pn.preparer_id = p.id AND pn.active = true
      WHERE c.status = 'active'
-       AND c.last_message_at < NOW() - ($1 * INTERVAL '1 hour')
+       AND p.auto_followup_enabled = TRUE
+       AND c.last_message_at < NOW() - (GREATEST(COALESCE(p.auto_followup_hours, $1), 1) * INTERVAL '1 hour')
      ORDER BY c.id`,
-    [hoursOld]
+    [fallbackHours]
   );
   return result.rows;
 }
@@ -303,7 +428,7 @@ export type ClientDashboardRow = {
 };
 
 export type DashboardData = {
-  preparer: Pick<Preparer, 'id' | 'name' | 'email' | 'drive_folder_id'>;
+  preparer: Pick<Preparer, 'id' | 'name' | 'email' | 'business_name' | 'drive_folder_id'>;
   clients: ClientDashboardRow[];
   unresolvedDeadLetterCount: number;
 };
@@ -313,14 +438,18 @@ export type ClientWithTwilio = {
   name: string;
   mobile: string;
   preparer_id: string;
+  preparer_name: string;
+  business_name: string | null;
   drive_folder_id: string | null;
   tax_year: number;
   twilio_number: string;
 };
 
 export async function getPreparerDashboard(preparerId: string): Promise<DashboardData | null> {
-  const prepResult = await pool.query<Pick<Preparer, 'id' | 'name' | 'email' | 'drive_folder_id'>>(
-    `SELECT id, name, email, drive_folder_id FROM preparers WHERE id = $1`,
+  const prepResult = await pool.query<Pick<Preparer, 'id' | 'name' | 'email' | 'business_name' | 'drive_folder_id'>>(
+    `SELECT id, name, email, business_name, drive_folder_id
+     FROM preparers
+     WHERE id = $1`,
     [preparerId]
   );
   const preparer = prepResult.rows[0];
@@ -339,9 +468,15 @@ export async function getPreparerDashboard(preparerId: string): Promise<Dashboar
             conv.docs_pending,
             conv.last_message_at
      FROM clients c
-     LEFT JOIN conversations conv ON conv.client_id = c.id AND conv.tax_year = 2027
+     LEFT JOIN conversations conv ON conv.client_id = c.id AND conv.tax_year = c.tax_year
      WHERE c.preparer_id = $1
-     ORDER BY c.id, conv.status DESC NULLS LAST, conv.last_message_at DESC NULLS LAST`,
+     ORDER BY c.id,
+              CASE
+                WHEN conv.status = 'active' THEN 0
+                WHEN conv.status = 'complete' THEN 1
+                ELSE 2
+              END,
+              conv.last_message_at DESC NULLS LAST`,
     [preparerId]
   );
 
@@ -364,11 +499,55 @@ export async function getPreparerDashboard(preparerId: string): Promise<Dashboar
   };
 }
 
+export type ClientProfile = {
+  client: Pick<Client, 'id' | 'name' | 'mobile' | 'tax_year' | 'drive_folder_id'>;
+  conversation: Pick<Conversation, 'id' | 'status' | 'docs_collected' | 'docs_pending'> | null;
+  messages: Message[];
+};
+
+export async function getClientProfile(clientId: string): Promise<ClientProfile | null> {
+  const clientResult = await pool.query<Pick<Client, 'id' | 'name' | 'mobile' | 'tax_year' | 'drive_folder_id'>>(
+    `SELECT id, name, mobile, tax_year, drive_folder_id FROM clients WHERE id = $1`,
+    [clientId]
+  );
+  const client = clientResult.rows[0];
+  if (!client) return null;
+
+  const convResult = await pool.query<Pick<Conversation, 'id' | 'status' | 'docs_collected' | 'docs_pending'>>(
+    `SELECT id, status, docs_collected, docs_pending
+     FROM conversations
+     WHERE client_id = $1
+     ORDER BY last_message_at DESC NULLS LAST
+     LIMIT 1`,
+    [clientId]
+  );
+  const conversation = convResult.rows[0] ?? null;
+
+  const messages: Message[] = [];
+  if (conversation) {
+    const msgResult = await pool.query<Message>(
+      `SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC`,
+      [conversation.id]
+    );
+    messages.push(...msgResult.rows);
+  }
+
+  return { client, conversation, messages };
+}
+
 export async function getClientWithTwilio(clientId: string): Promise<ClientWithTwilio | null> {
   const result = await pool.query<ClientWithTwilio>(
-    `SELECT c.id, c.name, c.mobile, c.preparer_id, c.drive_folder_id, c.tax_year,
+    `SELECT c.id,
+            c.name,
+            c.mobile,
+            c.preparer_id,
+            p.name AS preparer_name,
+            p.business_name,
+            c.drive_folder_id,
+            c.tax_year,
             pn.twilio_number
      FROM clients c
+     JOIN preparers p ON p.id = c.preparer_id
      JOIN phone_numbers pn ON pn.preparer_id = c.preparer_id AND pn.active = TRUE
      WHERE c.id = $1
      LIMIT 1`,

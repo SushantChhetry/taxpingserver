@@ -1,11 +1,14 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import {
+  DEFAULT_TAX_YEAR,
   getPreparerDashboard,
+  getPreparerSettings,
+  updatePreparerSettings,
   getClientWithTwilio,
+  getClientProfile,
   getOrCreateConversation,
   insertMessage,
   createClient,
@@ -13,9 +16,9 @@ import {
   type DashboardData,
 } from '../db/queries';
 import { sendSMS } from '../webhook/sender';
+import { formatMobile } from '../utils/phone';
 
-const _dir = dirname(fileURLToPath(import.meta.url));
-const LOGO_DATA_URI = `data:image/png;base64,${readFileSync(join(_dir, '../../src/assets/logo.png')).toString('base64')}`;
+const LOGO_DATA_URI = `data:image/png;base64,${readFileSync(join(process.cwd(), 'src/assets/logo.png')).toString('base64')}`;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -25,13 +28,6 @@ function escapeHtml(str: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function formatMobile(raw: string): string | null {
-  const digits = raw.replace(/\D/g, '');
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-  return null;
 }
 
 function formatRelativeTime(date: Date): string {
@@ -62,6 +58,34 @@ function getCardStatus(row: ClientDashboardRow): CardStatus {
 
 function firstWord(name: string): string {
   return name.trim().split(/\s+/)[0] ?? name;
+}
+
+function getPreparerDisplayName(preparerName: string, businessName: string | null): string {
+  return businessName?.trim() || preparerName;
+}
+
+function getTaxYearOptions(selectedYears: number[] = []): number[] {
+  const years = new Set([
+    DEFAULT_TAX_YEAR + 1,
+    DEFAULT_TAX_YEAR,
+    DEFAULT_TAX_YEAR - 1,
+    DEFAULT_TAX_YEAR - 2,
+    DEFAULT_TAX_YEAR - 3,
+    ...selectedYears,
+  ]);
+
+  return [...years].sort((a, b) => b - a);
+}
+
+function parseTaxYear(value: unknown): number | null {
+  if (value === undefined || value === null || value === '') return DEFAULT_TAX_YEAR;
+
+  const parsed =
+    typeof value === 'number'
+      ? value
+      : Number.parseInt(String(value), 10);
+
+  return Number.isInteger(parsed) ? parsed : null;
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -142,7 +166,7 @@ function renderStyles(): string {
 function renderHeader(): string {
   return `<header class="header">
   <div class="logo"><img src="${LOGO_DATA_URI}" alt="TaxPing"></div>
-  <div class="season-badge">2027 Tax Season</div>
+  <div class="season-badge">${DEFAULT_TAX_YEAR} Tax Season</div>
 </header>`;
 }
 
@@ -235,9 +259,8 @@ function renderCard(row: ClientDashboardRow): string {
 // ── Modal + Script ────────────────────────────────────────────────────────────
 
 function renderModal(): string {
-  const currentYear = 2027;
-  const yearOptions = [currentYear - 1, currentYear, currentYear + 1]
-    .map((y) => `<option value="${y}"${y === currentYear ? ' selected' : ''}>${y}</option>`)
+  const yearOptions = getTaxYearOptions()
+    .map((y) => `<option value="${y}"${y === DEFAULT_TAX_YEAR ? ' selected' : ''}>${y}</option>`)
     .join('');
   return `<div class="modal-overlay" id="addModal">
   <div class="modal">
@@ -365,6 +388,9 @@ async function sendReminder(clientId) {
 
 function renderPage(data: DashboardData, preparerId: string): string {
   const { preparer, clients, unresolvedDeadLetterCount } = data;
+  const yearFilterOptions = getTaxYearOptions(clients.map((client) => client.tax_year))
+    .map((year) => `<option value="${year}"${year === DEFAULT_TAX_YEAR ? ' selected' : ''}>${year}</option>`)
+    .join('');
   const alertBanner =
     unresolvedDeadLetterCount > 0
       ? `<div class="alert-banner">⚠️ ${unresolvedDeadLetterCount} document(s) failed to save to Drive. Check your Google Drive connection.</div>`
@@ -389,9 +415,7 @@ function renderPage(data: DashboardData, preparerId: string): string {
       <div class="top-bar-right">
         <select class="year-filter" id="yearFilter" onchange="filterByYear(this.value)">
           <option value="all">All Years</option>
-          <option value="2026">2026</option>
-          <option value="2027" selected>2027</option>
-          <option value="2028">2028</option>
+          ${yearFilterOptions}
         </select>
         <button class="btn-add" onclick="openModal()">+ Add Client</button>
       </div>
@@ -423,7 +447,7 @@ async function handleGetDashboard(
 async function handleAddClient(req: Request, res: Response): Promise<void> {
   try {
     const { preparerId, name, mobile: rawMobile, taxYear } = req.body as {
-      preparerId?: string; name?: string; mobile?: string; taxYear?: number;
+      preparerId?: string; name?: string; mobile?: string; taxYear?: unknown;
     };
     if (!preparerId || !name || !rawMobile) {
       res.status(400).json({ error: 'preparerId, name, and mobile are required' });
@@ -434,12 +458,17 @@ async function handleAddClient(req: Request, res: Response): Promise<void> {
       res.status(400).json({ error: 'Invalid mobile number. Please use a 10-digit US number.' });
       return;
     }
-    const client = await createClient(preparerId, name.trim(), mobile, taxYear ?? 2027);
+    const normalizedTaxYear = parseTaxYear(taxYear);
+    if (normalizedTaxYear === null) {
+      res.status(400).json({ error: 'Invalid tax year.' });
+      return;
+    }
+    const client = await createClient(preparerId, name.trim(), mobile, normalizedTaxYear);
     res.json({ success: true, clientId: client.id });
   } catch (err) {
     const pgErr = err as { code?: string };
     if (pgErr.code === '23505') {
-      res.status(409).json({ error: 'A client with this mobile number already exists.' });
+      res.status(409).json({ error: 'A client with this mobile number already exists for that tax year.' });
       return;
     }
     console.error('[dashboard] addClient error:', err);
@@ -456,12 +485,13 @@ async function handleSendRequest(
     if (!client) { res.status(404).json({ error: 'Client not found' }); return; }
 
     const name = firstWord(client.name);
+    const sender = getPreparerDisplayName(client.preparer_name, client.business_name);
     const body =
-      `Hi ${name}! Your tax preparer is using TaxPing to collect your documents this season. ` +
+      `Hi ${name}! ${sender} is using TaxPing to collect your documents this season. ` +
       `Just reply here with photos of your tax documents — W-2s, 1099s, etc. — and I'll take care of the rest. ` +
       `Reply STOP to opt out.`;
 
-    const conversation = await getOrCreateConversation(client.id);
+    const conversation = await getOrCreateConversation(client.id, client.tax_year);
     await sendSMS({ to: client.mobile, from: client.twilio_number, body });
     await insertMessage({ conversation_id: conversation.id, direction: 'outbound', body, media_url: null });
 
@@ -481,11 +511,12 @@ async function handleSendFollowup(
     if (!client) { res.status(404).json({ error: 'Client not found' }); return; }
 
     const name = firstWord(client.name);
+    const sender = getPreparerDisplayName(client.preparer_name, client.business_name);
     const body =
-      `Hi ${name}! Just a reminder — your tax preparer is still waiting on your tax documents. ` +
+      `Hi ${name}! Just a reminder — ${sender} is still waiting on your tax documents. ` +
       `Reply here with a photo when you're ready. Reply STOP to opt out.`;
 
-    const conversation = await getOrCreateConversation(client.id);
+    const conversation = await getOrCreateConversation(client.id, client.tax_year);
     await sendSMS({ to: client.mobile, from: client.twilio_number, body });
     await insertMessage({ conversation_id: conversation.id, direction: 'outbound', body, media_url: null });
 
@@ -493,6 +524,83 @@ async function handleSendFollowup(
   } catch (err) {
     console.error('[dashboard] sendFollowup error:', err);
     res.status(500).json({ error: 'Failed to send followup' });
+  }
+}
+
+function mapPreparerSettingsResponse(data: Awaited<ReturnType<typeof getPreparerSettings>>) {
+  if (!data) return null;
+
+  return {
+    preparer: {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      businessName: data.business_name ?? data.name,
+      autoFollowupEnabled: data.auto_followup_enabled,
+      autoFollowupHours: data.auto_followup_hours,
+      twilioNumber: data.twilio_number,
+      driveConnected: Boolean(data.drive_folder_id),
+    },
+  };
+}
+
+async function handleGetPreparerSettings(
+  req: Request<{ preparerId: string }>,
+  res: Response
+): Promise<void> {
+  try {
+    const data = await getPreparerSettings(req.params.preparerId);
+    if (!data) { res.status(404).json({ error: 'Preparer not found' }); return; }
+    res.json(mapPreparerSettingsResponse(data));
+  } catch (err) {
+    console.error('[dashboard] getPreparerSettings error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
+async function handleUpdatePreparerSettings(
+  req: Request<{ preparerId: string }>,
+  res: Response
+): Promise<void> {
+  try {
+    const {
+      businessName,
+      autoFollowupEnabled,
+      autoFollowupHours,
+    } = req.body as {
+      businessName?: string;
+      autoFollowupEnabled?: boolean;
+      autoFollowupHours?: number;
+    };
+
+    if (!businessName?.trim()) {
+      res.status(400).json({ error: 'Business name is required' });
+      return;
+    }
+
+    if (typeof autoFollowupEnabled !== 'boolean') {
+      res.status(400).json({ error: 'autoFollowupEnabled must be a boolean' });
+      return;
+    }
+
+    if (typeof autoFollowupHours !== 'number' || !Number.isInteger(autoFollowupHours) || autoFollowupHours < 1 || autoFollowupHours > 168) {
+      res.status(400).json({ error: 'autoFollowupHours must be an integer between 1 and 168' });
+      return;
+    }
+
+    const followupHours = autoFollowupHours;
+
+    const updated = await updatePreparerSettings(req.params.preparerId, {
+      businessName: businessName.trim(),
+      autoFollowupEnabled,
+      autoFollowupHours: followupHours,
+    });
+    if (!updated) { res.status(404).json({ error: 'Preparer not found' }); return; }
+
+    res.json(mapPreparerSettingsResponse(updated));
+  } catch (err) {
+    console.error('[dashboard] updatePreparerSettings error:', err);
+    res.status(500).json({ error: 'Failed to update settings' });
   }
 }
 
@@ -539,7 +647,16 @@ async function handleGetDashboardJson(
       issues: unresolvedDeadLetterCount,
     };
 
-    res.json({ preparer, clients, stats });
+    res.json({
+      preparer: {
+        id: preparer.id,
+        name: preparer.name,
+        email: preparer.email,
+        businessName: preparer.business_name ?? preparer.name,
+      },
+      clients,
+      stats,
+    });
   } catch (err) {
     console.error('[dashboard] getDashboardJson error:', err);
     res.status(500).json({ error: 'Server error' });
@@ -566,6 +683,12 @@ router.post('/clients/:clientId/followup', (req, res) =>
 router.get('/api/dashboard/:preparerId', (req, res) =>
   handleGetDashboardJson(req as Request<{ preparerId: string }>, res)
 );
+router.get('/api/preparers/:preparerId/settings', (req, res) =>
+  handleGetPreparerSettings(req as Request<{ preparerId: string }>, res)
+);
+router.put('/api/preparers/:preparerId/settings', (req, res) =>
+  handleUpdatePreparerSettings(req as Request<{ preparerId: string }>, res)
+);
 router.post('/api/clients', handleAddClient);
 router.post('/api/clients/:clientId/request', (req, res) =>
   handleSendRequest(req as Request<{ clientId: string }>, res)
@@ -573,5 +696,31 @@ router.post('/api/clients/:clientId/request', (req, res) =>
 router.post('/api/clients/:clientId/followup', (req, res) =>
   handleSendFollowup(req as Request<{ clientId: string }>, res)
 );
+router.post('/api/clients/:clientId/message', async (req: Request<{ clientId: string }>, res: Response) => {
+  try {
+    const { body } = req.body as { body?: string };
+    if (!body?.trim()) { res.status(400).json({ error: 'Message body is required' }); return; }
+    const client = await getClientWithTwilio(req.params.clientId);
+    if (!client) { res.status(404).json({ error: 'Client not found' }); return; }
+    const conversation = await getOrCreateConversation(client.id, client.tax_year);
+    await sendSMS({ to: client.mobile, from: client.twilio_number, body: body.trim() });
+    const message = await insertMessage({ conversation_id: conversation.id, direction: 'outbound', body: body.trim(), media_url: null });
+    res.json({ success: true, message });
+  } catch (err) {
+    console.error('[dashboard] sendMessage error:', err);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+router.get('/api/clients/:clientId/profile', async (req: Request<{ clientId: string }>, res: Response) => {
+  try {
+    const profile = await getClientProfile(req.params.clientId);
+    if (!profile) { res.status(404).json({ error: 'Client not found' }); return; }
+    res.json(profile);
+  } catch (err) {
+    console.error('[dashboard] getClientProfile error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 export default router;

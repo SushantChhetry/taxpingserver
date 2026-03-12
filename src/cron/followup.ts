@@ -15,7 +15,7 @@ const CRON_SCHEDULE = '0 * * * *'; // every hour on the hour
 
 async function sendFollowup(conv: ConversationForFollowup): Promise<void> {
   const replyText = await generateReply({
-    preparerName: conv.preparer_name,
+    preparerName: conv.preparer_business_name?.trim() || conv.preparer_name,
     clientName: conv.client_name,
     docsCollected: conv.docs_collected,
     docsPending: conv.docs_pending,

@@ -2,8 +2,11 @@ CREATE TABLE IF NOT EXISTS preparers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
-  drive_token JSONB,
+  drive_tokens JSONB,
   drive_folder_id TEXT,
+  business_name TEXT,
+  auto_followup_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  auto_followup_hours INTEGER NOT NULL DEFAULT 48,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -57,3 +60,9 @@ CREATE TABLE IF NOT EXISTS dead_letter_queue (
   resolved BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE preparers
+  ADD COLUMN IF NOT EXISTS drive_tokens JSONB,
+  ADD COLUMN IF NOT EXISTS business_name TEXT,
+  ADD COLUMN IF NOT EXISTS auto_followup_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS auto_followup_hours INTEGER NOT NULL DEFAULT 48;

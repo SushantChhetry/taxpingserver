@@ -5,7 +5,9 @@ import { validateEnv } from './utils/env';
 import authRouter from './routes/auth';
 import inboundRouter from './webhook/inbound';
 import dashboardRouter from './routes/dashboard';
+import publicRouter from './routes/public';
 import { initFollowupCron } from './cron/followup';
+import { ensureSchema } from './db/client';
 import { getConversationStatus } from './db/queries';
 
 const env = validateEnv();
@@ -18,6 +20,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(authRouter);
 app.use(inboundRouter);
 app.use(dashboardRouter);
+app.use(publicRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
@@ -40,9 +43,18 @@ app.get('/status/:conversationId', async (req: Request<{ conversationId: string 
 
 const port = parseInt(env.PORT, 10);
 
-app.listen(port, () => {
-  console.log(`TaxPing server listening on port ${port}`);
-  initFollowupCron();
+async function start(): Promise<void> {
+  await ensureSchema();
+
+  app.listen(port, () => {
+    console.log(`TaxPing server listening on port ${port}`);
+    initFollowupCron();
+  });
+}
+
+start().catch((err) => {
+  console.error('[startup] Failed to initialize database schema:', err);
+  process.exit(1);
 });
 
 export default app;
