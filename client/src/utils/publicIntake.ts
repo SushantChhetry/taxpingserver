@@ -3,7 +3,6 @@ import { DEFAULT_BRAND_COLOR, normalizeHexColor } from './brandThemes';
 
 const DEFAULT_OPENING_TEXT = "Hi, I'm ready to send my tax documents.";
 export const LANDING_TRY_SMS_PHONE = '+12562253874';
-export const LANDING_TRY_SMS_BODY = 'Hi TaxPing, I am ready to do my taxes';
 
 export const DEMO_PREPARER_ID = 'demo';
 
@@ -43,6 +42,10 @@ export function buildSmsHref(
   userAgent?: string,
   maxTouchPoints?: number
 ): string {
+  if (!body) {
+    return `sms:${phone}`;
+  }
+
   const isIos =
     typeof userAgent === 'string' &&
     (/(iPad|iPhone|iPod)/i.test(userAgent) ||

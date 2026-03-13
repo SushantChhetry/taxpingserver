@@ -93,7 +93,7 @@ export default function Messages() {
         activeNav="Messages"
       />
 
-      <div style={{ flex: 1, marginLeft: 240, padding: 24 }}>
+      <div className="app-page">
         <div style={{ maxWidth: 1240, margin: '0 auto', display: 'grid', gap: 20 }}>
           <section style={{ background: 'white', borderRadius: 28, border: '1px solid #E2E6F0', padding: 20, boxShadow: '0 18px 42px rgba(19, 36, 80, 0.06)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>

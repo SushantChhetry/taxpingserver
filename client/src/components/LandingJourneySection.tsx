@@ -19,62 +19,62 @@ const JOURNEY_STEPS: JourneyStep[] = [
   {
     label: '01',
     kicker: 'Start',
-    title: 'The client opens the file by text.',
-    body: 'One message starts intake. TaxPing replies instantly with the first document list.',
-    detail: 'No portal login. No staff handoff. The same thread now holds the whole intake.',
+    title: 'Client opens one text thread.',
+    body: 'One message starts intake. TaxPing answers with the first short checklist.',
+    detail: 'No login and no handoff. The whole intake stays in one thread.',
     messages: [
       { side: 'client', text: "Hi TaxPing, I'm ready to do my taxes." },
       {
         side: 'brand',
-        text: "You're in the right place. Send your W-2, photo ID, and last year's return here when you're ready.",
+        text: "You're in. Send your W-2, photo ID, and last year's return here.",
       },
     ],
   },
   {
     label: '02',
     kicker: 'Confirm',
-    title: 'TaxPing confirms exactly what arrived.',
-    body: 'The client sends the first batch. TaxPing answers with the exact docs it found.',
-    detail: 'That removes “did that upload work?” and keeps the thread moving forward.',
+    title: 'TaxPing confirms each file.',
+    body: 'The client sends the first batch. TaxPing says exactly what it found.',
+    detail: 'Clients know it worked. Staff do not have to manually check the first upload.',
     messages: [
       {
         side: 'client',
-        text: 'Just sent the first batch.',
+        text: 'Sent the first batch.',
         attachments: ['W-2.pdf', 'Photo-ID.jpg', '1099-INT.pdf'],
       },
       {
         side: 'brand',
-        text: 'Got them. I found your W-2, ID, and 1099-INT.',
+        text: 'Got them: W-2, ID, and 1099-INT.',
       },
     ],
   },
   {
     label: '03',
     kicker: 'Narrow',
-    title: 'Only the missing gap gets asked for.',
-    body: 'The thread tightens to the one remaining document and one short tax question.',
-    detail: 'No generic checklist. No restart. Just the next thing blocking prep.',
+    title: 'Only the missing item stays open.',
+    body: 'The thread narrows to one missing document and one short question.',
+    detail: 'No giant checklist. Just the next blocker holding up prep.',
     messages: [
       {
         side: 'brand',
-        text: "I still need last year's return and one quick answer: did you move states in 2025?",
+        text: "I still need last year's return. One quick question: did you move states in 2025?",
       },
       {
         side: 'client',
-        text: "Yes. Georgia to Alabama in June. I'm sending last year's return now.",
+        text: "Yes. Georgia to Alabama in June. Sending it now.",
       },
     ],
   },
   {
     label: '04',
     kicker: 'Finish',
-    title: 'TaxPing follows up and closes the file.',
-    body: 'If the client stalls, it sends the reminder in the same thread and marks the file ready when the last form arrives.',
-    detail: 'The conversation ends with a clear handoff: complete, confirmed, ready for prep.',
+    title: 'Reminders close the file.',
+    body: 'If the client pauses, TaxPing follows up and marks the file ready when the last form arrives.',
+    detail: 'The handoff is clear: complete, confirmed, and ready for prep.',
     messages: [
       {
         side: 'brand',
-        text: "Quick reminder from TaxPing: I'm still waiting on your 1095-A to finish this file.",
+        text: "Quick reminder: I'm still waiting on your 1095-A.",
       },
       {
         side: 'client',
@@ -83,7 +83,7 @@ const JOURNEY_STEPS: JourneyStep[] = [
       },
       {
         side: 'brand',
-        text: 'Perfect. Your file is complete and your preparer has what they need to get started.',
+        text: 'Perfect. Your file is complete and ready for prep.',
       },
     ],
   },
@@ -164,8 +164,22 @@ export default function LandingJourneySection() {
       <div className="lp-section lp-journey-shell">
         <div className="lp-journey-head">
           <div className="lp-eyebrow">From first text to ready file</div>
-          <h2>Four sharp steps. One thread.</h2>
-          <p>Scroll the steps. The preview stays locked on the exact exchange for the step in view.</p>
+          <h2>Four quick steps. One clear thread.</h2>
+          <p>Tap a step or scroll. The preview stays locked to the exact exchange on the right.</p>
+        </div>
+
+        <div className="lp-journey-summary" aria-label="Journey summary">
+          {JOURNEY_STEPS.map((step, index) => (
+            <button
+              key={`${step.label}-summary`}
+              type="button"
+              className={`lp-journey-summary-pill ${activeStep === index ? 'lp-journey-summary-pill-active' : ''}`}
+              onClick={() => scrollToJourneyStep(index)}
+            >
+              <span className="lp-journey-summary-index">{step.label}</span>
+              <span className="lp-journey-summary-title">{step.kicker}</span>
+            </button>
+          ))}
         </div>
 
         <div className="lp-journey-story">
@@ -181,7 +195,10 @@ export default function LandingJourneySection() {
                 className={`lp-journey-step ${activeStep === index ? 'lp-journey-step-active' : ''} ${index < activeStep ? 'lp-journey-step-complete' : ''}`}
                 onClick={() => scrollToJourneyStep(index)}
               >
-                <span className="lp-journey-step-label">Step {step.label}</span>
+                <div className="lp-journey-step-meta">
+                  <span className="lp-journey-step-index">{step.label}</span>
+                  <span className="lp-journey-step-kicker">{step.kicker}</span>
+                </div>
                 <strong>{step.title}</strong>
                 <p>{step.body}</p>
               </button>
@@ -194,6 +211,7 @@ export default function LandingJourneySection() {
                 Step {currentStep.label} · {currentStep.kicker}
               </span>
               <strong>{currentStep.title}</strong>
+              <span className="lp-journey-preview-note-label">Why it matters</span>
               <p>{currentStep.detail}</p>
             </div>
 

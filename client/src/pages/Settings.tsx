@@ -382,7 +382,7 @@ export default function Settings() {
         activeNav="Settings"
       />
 
-      <div style={{ flex: 1, marginLeft: 240, padding: 20 }}>
+      <div className="app-page app-page-tight">
         <div style={{
           background: 'white',
           border: '1px solid #E2E6F0',

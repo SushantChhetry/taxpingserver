@@ -401,7 +401,7 @@ export default function ClientProfile() {
           businessName={preparer.businessName}
           activeNav="Clients"
         />
-        <div style={{ flex: 1, marginLeft: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div className="app-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div
             className="overview-panel"
             style={{
@@ -453,7 +453,7 @@ export default function ClientProfile() {
         activeNav="Clients"
       />
 
-      <div className="client-profile-page" style={{ flex: 1, marginLeft: 240, padding: 24, height: '100vh', overflow: 'hidden' }}>
+      <div className="client-profile-page app-page" style={{ height: '100vh', overflow: 'hidden' }}>
         <div className="client-profile-shell" style={{ maxWidth: 1360, margin: '0 auto', display: 'grid', gap: 20, height: '100%' }}>
           <section
             className="overview-panel overview-enter"

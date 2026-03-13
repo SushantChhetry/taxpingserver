@@ -12,6 +12,8 @@ import { Link } from 'react-router-dom';
 import LandingJourneySection from '../components/LandingJourneySection';
 import TaxPingLogo from '../components/TaxPingLogo';
 import {
+  LANDING_TRY_SMS_PHONE,
+  buildSmsHref,
   buildQrImageUrl,
 } from '../utils/publicIntake';
 import '../components/TaxPingLogo.css';
@@ -38,19 +40,25 @@ type CalendlyWindow = Window & typeof globalThis & {
 
 const PRINCIPLES = [
   {
+    step: '01',
+    kicker: 'Start',
     icon: QrCode,
-    title: 'Start in one place',
-    body: 'Clients use your signup link or QR code, so your staff does not need to explain where to begin.',
+    title: 'Start by text',
+    body: 'One link or QR code gets the client into the right thread. No portal or app.',
   },
   {
+    step: '02',
+    kicker: 'Confirm',
     icon: MessageSquareText,
-    title: 'Stay in text',
-    body: 'Clients reply by text, so sending the first document feels quick and familiar.',
+    title: 'Confirm each file',
+    body: 'TaxPing names what arrived, so the client knows the upload worked right away.',
   },
   {
+    step: '03',
+    kicker: 'Close',
     icon: Workflow,
-    title: 'See what is missing',
-    body: 'TaxPing asks for the next item, sends reminders, and updates the file when something arrives.',
+    title: 'Ask only for the gap',
+    body: 'The thread stays focused on the next missing item until the file is ready for prep.',
   },
 ];
 
@@ -183,9 +191,7 @@ export default function LandingPage() {
   const calendlyRef = useRef<HTMLDivElement | null>(null);
   const ctaSectionRef = useRef<HTMLElement | null>(null);
   const landingTryTextPath = '/landing/try-text';
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const landingTryTextUrl = origin ? `${origin}${landingTryTextPath}` : '';
-  const landingTryQrUrl = landingTryTextUrl ? buildQrImageUrl(landingTryTextUrl, 480) : '';
+  const landingTryQrUrl = buildQrImageUrl(buildSmsHref(LANDING_TRY_SMS_PHONE, ''), 480);
 
   useEffect(() => {
     const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-lp-reveal]'));
@@ -355,34 +361,38 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="product" className="lp-section">
-          <div className="lp-section-heading lp-reveal" data-lp-reveal>
-            <div className="lp-eyebrow">How it works</div>
-            <h2>Three simple ideas make this easy.</h2>
-            <p>
-              Clients start in one place, reply by text, and your team can see what is still missing.
-            </p>
-          </div>
+        <section id="product" className="lp-section lp-how-section">
+          <div className="lp-how-shell">
+            <div className="lp-section-heading">
+              <div className="lp-eyebrow">How it works</div>
+              <h2>See the flow in one glance.</h2>
+              <p>
+                Clients start by text. TaxPing confirms what arrived, asks for what is missing, and closes the loop.
+              </p>
+            </div>
 
-          <div className="lp-principles-grid">
-            {PRINCIPLES.map((principle, index) => {
-              const Icon = principle.icon;
+            <div className="lp-principles-grid">
+              {PRINCIPLES.map((principle) => {
+                const Icon = principle.icon;
 
-              return (
-                <article
-                  key={principle.title}
-                  className="lp-principle-card lp-reveal"
-                  data-lp-reveal
-                  style={{ transitionDelay: `${index * 90}ms` }}
-                >
-                  <div className="lp-principle-icon">
-                    <Icon size={20} />
-                  </div>
-                  <h3>{principle.title}</h3>
-                  <p>{principle.body}</p>
-                </article>
-              );
-            })}
+                return (
+                  <article
+                    key={principle.title}
+                    className="lp-principle-card"
+                  >
+                    <div className="lp-principle-top">
+                      <div className="lp-principle-icon">
+                        <Icon size={20} />
+                      </div>
+                      <span className="lp-principle-step">{principle.step}</span>
+                    </div>
+                    <div className="lp-principle-kicker">{principle.kicker}</div>
+                    <h3>{principle.title}</h3>
+                    <p>{principle.body}</p>
+                  </article>
+                );
+              })}
+            </div>
           </div>
         </section>
 

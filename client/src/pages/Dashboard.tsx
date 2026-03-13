@@ -606,7 +606,7 @@ export default function Dashboard() {
         activeNav="Clients"
       />
 
-      <div className="dashboard-page" style={{ flex: 1, marginLeft: 240, padding: 24 }}>
+      <div className="dashboard-page app-page">
         <div className="dashboard-shell" style={{ maxWidth: 1320, margin: '0 auto', display: 'grid', gap: 20 }}>
           <section
             className="overview-panel overview-enter dashboard-main-panel"

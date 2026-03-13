@@ -3,19 +3,12 @@ import { ArrowRight, MessageSquareText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import logo from '../../../src/assets/logo.png';
 import {
-  LANDING_TRY_SMS_BODY,
   LANDING_TRY_SMS_PHONE,
   buildSmsHref,
-  formatPhoneForDisplay,
 } from '../utils/publicIntake';
 
 export default function LandingTryText() {
-  const smsHref = buildSmsHref(
-    LANDING_TRY_SMS_PHONE,
-    LANDING_TRY_SMS_BODY,
-    typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
-    typeof navigator !== 'undefined' ? navigator.maxTouchPoints : undefined
-  );
+  const smsHref = buildSmsHref(LANDING_TRY_SMS_PHONE, '');
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -77,47 +70,6 @@ export default function LandingTryText() {
 
         <div style={{ marginTop: 14, fontSize: 15, lineHeight: 1.7, color: '#475569' }}>
           We are opening a new text to TaxPing. If nothing happens, use the button below.
-        </div>
-
-        <div
-          style={{
-            marginTop: 22,
-            display: 'grid',
-            gap: 12,
-            textAlign: 'left',
-          }}
-        >
-          <div
-            style={{
-              borderRadius: 20,
-              background: '#F8FBFF',
-              border: '1px solid #D7E3F1',
-              padding: 18,
-            }}
-          >
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748B' }}>
-              Phone
-            </div>
-            <div style={{ marginTop: 8, fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: '#111827' }}>
-              {formatPhoneForDisplay(LANDING_TRY_SMS_PHONE)}
-            </div>
-          </div>
-
-          <div
-            style={{
-              borderRadius: 20,
-              background: '#F8FBFF',
-              border: '1px solid #D7E3F1',
-              padding: 18,
-            }}
-          >
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748B' }}>
-              Text
-            </div>
-            <div style={{ marginTop: 8, fontSize: 17, lineHeight: 1.6, fontWeight: 700, color: '#111827' }}>
-              {LANDING_TRY_SMS_BODY}
-            </div>
-          </div>
         </div>
 
         <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>

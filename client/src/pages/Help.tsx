@@ -478,7 +478,7 @@ export default function Help() {
         activeNav="Help"
       />
 
-      <div style={{ flex: 1, marginLeft: 240, padding: 24 }}>
+      <div className="app-page">
         <div style={{ maxWidth: 1320, margin: '0 auto', display: 'grid', gap: 20 }}>
           <section
             className="overview-enter overview-hero-shell"
