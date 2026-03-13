@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { SiGoogledrive, SiInstagram } from '@icons-pack/react-simple-icons';
 import {
   ArrowLeft,
   BellRing,
@@ -7,11 +8,10 @@ import {
   Clock3,
   ExternalLink,
   Globe,
-  HardDrive,
   Image as ImageIcon,
-  Instagram,
   Linkedin,
   Mail,
+  MessageSquare,
   Palette,
   Phone,
   QrCode,
@@ -33,9 +33,61 @@ import {
 } from '../utils/brandThemes';
 
 const FOLLOWUP_OPTIONS = [24, 48, 72, 96];
+const AI_TONE_OPTIONS = [
+  {
+    id: 'friendly' as const,
+    label: 'Friendly',
+    detail: 'Warm and welcoming for most firms.',
+  },
+  {
+    id: 'calm' as const,
+    label: 'Calm',
+    detail: 'A little softer for clients who need reassurance.',
+  },
+  {
+    id: 'direct' as const,
+    label: 'Direct',
+    detail: 'Short and clear with less small talk.',
+  },
+];
 
 function getPreviewColor(color: string): string {
   return normalizeHexColor(color) ?? '#3B6FE8';
+}
+
+function buildAssistantPreview(
+  tone: 'friendly' | 'calm' | 'direct',
+  businessName: string,
+  clientNotes: string,
+  collectDocuments: boolean,
+  collectTaxSituation: boolean,
+  customQuestions: string[],
+  reviewRequestEnabled: boolean
+): string {
+  const firm = businessName || 'Your business';
+  const note = clientNotes.trim();
+  const focus = [
+    collectDocuments ? 'tax documents' : null,
+    collectTaxSituation ? 'a few tax situation details' : null,
+  ].filter(Boolean).join(' and ');
+  const questionHint = customQuestions[0] ? ` First question: ${customQuestions[0]}` : '';
+  const closingHint = reviewRequestEnabled ? ' When the file is finished, I can also send a quick review ask.' : '';
+
+  if (tone === 'calm') {
+    return note
+      ? `Hi! I’m here to help ${firm} gather ${focus || 'what is needed'}. ${note}${questionHint}${closingHint}`
+      : `Hi! I’m here to help ${firm} gather ${focus || 'what is needed'}. Send a photo whenever you’re ready.${questionHint}${closingHint}`;
+  }
+
+  if (tone === 'direct') {
+    return note
+      ? `${firm} here. Please send ${focus || 'what is needed'} when ready. ${note}${questionHint}${closingHint}`
+      : `${firm} here. Please send ${focus || 'what is needed'} when ready.${questionHint}${closingHint}`;
+  }
+
+  return note
+    ? `Hi! I’m helping ${firm} gather ${focus || 'what is needed'}. ${note}${questionHint}${closingHint}`
+    : `Hi! I’m helping ${firm} gather ${focus || 'what is needed'}. You can send a photo here anytime.${questionHint}${closingHint}`;
 }
 
 function DetailCard({
@@ -97,6 +149,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'business' | 'ai'>('business');
   const [form, setForm] = useState({
     businessName: '',
     brandThemeId: '',
@@ -106,6 +159,13 @@ export default function Settings() {
     websiteUrl: '',
     instagramUrl: '',
     linkedinUrl: '',
+    aiTone: 'friendly' as 'friendly' | 'calm' | 'direct',
+    aiClientNotes: '',
+    aiCollectDocuments: true,
+    aiCollectTaxSituation: false,
+    aiCustomQuestionsText: '',
+    aiReviewRequestEnabled: false,
+    aiReviewRequestMessage: '',
     autoFollowupEnabled: true,
     autoFollowupHours: 48,
   });
@@ -126,6 +186,13 @@ export default function Settings() {
           websiteUrl: response.preparer.branding.websiteUrl ?? '',
           instagramUrl: response.preparer.branding.instagramUrl ?? '',
           linkedinUrl: response.preparer.branding.linkedinUrl ?? '',
+          aiTone: response.preparer.aiAssistant.tone,
+          aiClientNotes: response.preparer.aiAssistant.clientNotes ?? '',
+          aiCollectDocuments: response.preparer.aiAssistant.collectDocuments,
+          aiCollectTaxSituation: response.preparer.aiAssistant.collectTaxSituation,
+          aiCustomQuestionsText: response.preparer.aiAssistant.customQuestions.join('\n'),
+          aiReviewRequestEnabled: response.preparer.aiAssistant.reviewRequestEnabled,
+          aiReviewRequestMessage: response.preparer.aiAssistant.reviewRequestMessage ?? '',
           autoFollowupEnabled: response.preparer.autoFollowupEnabled,
           autoFollowupHours: response.preparer.autoFollowupHours,
         });
@@ -144,9 +211,18 @@ export default function Settings() {
     autoFollowupHours: 48,
     twilioNumber: null,
     driveConnected: false,
-      branding: {
-        themeId: null,
-        color: null,
+    aiAssistant: {
+      tone: 'friendly' as const,
+      clientNotes: null,
+      collectDocuments: true,
+      collectTaxSituation: false,
+      customQuestions: [],
+      reviewRequestEnabled: false,
+      reviewRequestMessage: null,
+    },
+    branding: {
+      themeId: null,
+      color: null,
       tagline: null,
       logoUrl: null,
       websiteUrl: null,
@@ -163,6 +239,13 @@ export default function Settings() {
   const trimmedWebsiteUrl = form.websiteUrl.trim();
   const trimmedInstagramUrl = form.instagramUrl.trim();
   const trimmedLinkedinUrl = form.linkedinUrl.trim();
+  const trimmedAiClientNotes = form.aiClientNotes.trim();
+  const trimmedAiReviewRequestMessage = form.aiReviewRequestMessage.trim();
+  const aiCustomQuestions = form.aiCustomQuestionsText
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 8);
   const selectedTheme = getBrandThemeById(trimmedBrandThemeId);
   const effectiveBrandColor = selectedTheme?.primary ?? trimmedBrandColor;
   const hasChanges = Boolean(
@@ -176,6 +259,13 @@ export default function Settings() {
       trimmedWebsiteUrl !== (data.preparer.branding.websiteUrl ?? '') ||
       trimmedInstagramUrl !== (data.preparer.branding.instagramUrl ?? '') ||
       trimmedLinkedinUrl !== (data.preparer.branding.linkedinUrl ?? '') ||
+      form.aiTone !== data.preparer.aiAssistant.tone ||
+      trimmedAiClientNotes !== (data.preparer.aiAssistant.clientNotes ?? '') ||
+      form.aiCollectDocuments !== data.preparer.aiAssistant.collectDocuments ||
+      form.aiCollectTaxSituation !== data.preparer.aiAssistant.collectTaxSituation ||
+      aiCustomQuestions.join('\n') !== data.preparer.aiAssistant.customQuestions.join('\n') ||
+      form.aiReviewRequestEnabled !== data.preparer.aiAssistant.reviewRequestEnabled ||
+      trimmedAiReviewRequestMessage !== (data.preparer.aiAssistant.reviewRequestMessage ?? '') ||
       form.autoFollowupEnabled !== data.preparer.autoFollowupEnabled ||
       form.autoFollowupHours !== data.preparer.autoFollowupHours
     )
@@ -190,9 +280,19 @@ export default function Settings() {
   const previewLogoUrl = trimmedBrandLogoUrl || logo;
   const previewLinks = [
     { label: 'Website', value: trimmedWebsiteUrl, icon: <Globe size={14} /> },
-    { label: 'Instagram', value: trimmedInstagramUrl, icon: <Instagram size={14} /> },
+    { label: 'Instagram', value: trimmedInstagramUrl, icon: <SiInstagram size={14} color="default" /> },
     { label: 'LinkedIn', value: trimmedLinkedinUrl, icon: <Linkedin size={14} /> },
   ].filter((item) => item.value);
+  const assistantPreview = buildAssistantPreview(
+    form.aiTone,
+    trimmedBusinessName,
+    trimmedAiClientNotes,
+    form.aiCollectDocuments,
+    form.aiCollectTaxSituation,
+    aiCustomQuestions,
+    form.aiReviewRequestEnabled
+  );
+  const selectedAiTone = AI_TONE_OPTIONS.find((option) => option.id === form.aiTone);
 
   function resetToDefaultTheme() {
     const defaultTheme = getBrandThemeById('classic-blue');
@@ -218,6 +318,13 @@ export default function Settings() {
         websiteUrl: trimmedWebsiteUrl,
         instagramUrl: trimmedInstagramUrl,
         linkedinUrl: trimmedLinkedinUrl,
+        aiTone: form.aiTone,
+        aiClientNotes: trimmedAiClientNotes,
+        aiCollectDocuments: form.aiCollectDocuments,
+        aiCollectTaxSituation: form.aiCollectTaxSituation,
+        aiCustomQuestions,
+        aiReviewRequestEnabled: form.aiReviewRequestEnabled,
+        aiReviewRequestMessage: trimmedAiReviewRequestMessage,
         autoFollowupEnabled: form.autoFollowupEnabled,
         autoFollowupHours: form.autoFollowupHours,
       });
@@ -231,6 +338,13 @@ export default function Settings() {
         websiteUrl: updated.preparer.branding.websiteUrl ?? '',
         instagramUrl: updated.preparer.branding.instagramUrl ?? '',
         linkedinUrl: updated.preparer.branding.linkedinUrl ?? '',
+        aiTone: updated.preparer.aiAssistant.tone,
+        aiClientNotes: updated.preparer.aiAssistant.clientNotes ?? '',
+        aiCollectDocuments: updated.preparer.aiAssistant.collectDocuments,
+        aiCollectTaxSituation: updated.preparer.aiAssistant.collectTaxSituation,
+        aiCustomQuestionsText: updated.preparer.aiAssistant.customQuestions.join('\n'),
+        aiReviewRequestEnabled: updated.preparer.aiAssistant.reviewRequestEnabled,
+        aiReviewRequestMessage: updated.preparer.aiAssistant.reviewRequestMessage ?? '',
         autoFollowupEnabled: updated.preparer.autoFollowupEnabled,
         autoFollowupHours: updated.preparer.autoFollowupHours,
       });
@@ -303,7 +417,32 @@ export default function Settings() {
                 Settings
               </div>
               <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 6 }}>
-                Manage how TaxPing presents your firm and handles client follow-ups.
+                Keep business details separate from AI behavior so setup stays simple.
+              </div>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
+                {[
+                  { id: 'business' as const, label: 'Business information' },
+                  { id: 'ai' as const, label: 'AI setup' },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    style={{
+                      border: `1px solid ${activeTab === tab.id ? 'var(--brand-primary, #3B6FE8)' : '#D7DCE8'}`,
+                      borderRadius: 999,
+                      padding: '10px 14px',
+                      background: activeTab === tab.id ? 'var(--brand-primary-light, #EEF2FF)' : 'white',
+                      color: activeTab === tab.id ? 'var(--brand-primary-dark, #21449C)' : '#475569',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      fontFamily: 'inherit',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -319,13 +458,14 @@ export default function Settings() {
               </div>
               <div style={{ fontSize: 14, color: '#1A1A1A', marginTop: 8, lineHeight: 1.5 }}>
                 {trimmedBusinessName || 'Your business'} sends reminders after{' '}
-                {form.autoFollowupHours} hours of inactivity.
+                {form.autoFollowupHours} hours of inactivity with a {selectedAiTone?.label.toLowerCase() ?? 'friendly'} assistant voice.
               </div>
             </div>
           </div>
 
           <div style={{ padding: 28, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {activeTab === 'business' && (
               <div style={{
                 border: '1px solid #E2E6F0',
                 borderRadius: 12,
@@ -365,7 +505,9 @@ export default function Settings() {
                   />
                 </label>
               </div>
+              )}
 
+              {activeTab === 'business' && (
               <div style={{
                 border: '1px solid #E2E6F0',
                 borderRadius: 12,
@@ -583,7 +725,7 @@ export default function Settings() {
                       Instagram
                     </div>
                     <div style={{ position: 'relative' }}>
-                      <Instagram size={15} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+                      <SiInstagram size={15} color="#E4405F" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
                       <input
                         type="url"
                         value={form.instagramUrl}
@@ -631,7 +773,236 @@ export default function Settings() {
                   </label>
                 </div>
               </div>
+              )}
 
+              {activeTab === 'ai' && (
+              <div style={{
+                border: '1px solid #E2E6F0',
+                borderRadius: 12,
+                padding: 22,
+                background: '#FCFCFD',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                  <MessageSquare size={18} color="var(--brand-primary, #3B6FE8)" />
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>AI assistant</div>
+                    <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 3 }}>
+                      Decide how the assistant talks, what it should collect, and what it should ask automatically.
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 8 }}>
+                    How should it sound?
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+                    {AI_TONE_OPTIONS.map((option) => {
+                      const selected = form.aiTone === option.id;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => setForm((prev) => ({ ...prev, aiTone: option.id }))}
+                          style={{
+                            border: `1px solid ${selected ? 'var(--brand-primary, #3B6FE8)' : '#D7DCE8'}`,
+                            borderRadius: 12,
+                            padding: 14,
+                            background: selected ? 'var(--brand-primary-light, #EEF2FF)' : 'white',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#1A1A1A' }}>{option.label}</div>
+                          <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.5, color: '#6B7280' }}>{option.detail}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <label style={{ display: 'block', marginTop: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 8 }}>
+                    One note for every client message
+                  </div>
+                  <div style={{ position: 'relative' }}>
+                    <Quote size={15} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: 14 }} />
+                    <textarea
+                      value={form.aiClientNotes}
+                      onChange={(e) => setForm((prev) => ({ ...prev, aiClientNotes: e.target.value.slice(0, 280) }))}
+                      placeholder="Example: Let clients know we usually review uploads the same day."
+                      rows={4}
+                      style={{
+                        width: '100%',
+                        border: '1px solid #D7DCE8',
+                        borderRadius: 10,
+                        padding: '12px 14px 12px 38px',
+                        fontSize: 15,
+                        color: '#1A1A1A',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        resize: 'vertical',
+                        minHeight: 108,
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 8 }}>
+                    <div style={{ fontSize: 12, lineHeight: 1.5, color: '#9CA3AF' }}>
+                      This helps the assistant stay on-brand without adding extra setup.
+                    </div>
+                    <div style={{ fontSize: 12, color: '#9CA3AF', flexShrink: 0 }}>
+                      {form.aiClientNotes.length}/280
+                    </div>
+                  </div>
+                </label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginTop: 16 }}>
+                  <div style={{ border: '1px solid #E2E6F0', borderRadius: 12, background: 'white', padding: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>Try to collect documents</div>
+                        <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>
+                          Keep asking for uploads like W-2s and 1099s.
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, aiCollectDocuments: !prev.aiCollectDocuments }))}
+                        style={{
+                          width: 54,
+                          height: 30,
+                          borderRadius: 9999,
+                          border: 'none',
+                          background: form.aiCollectDocuments ? 'var(--brand-primary, #3B6FE8)' : '#D1D5DB',
+                          padding: 4,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: form.aiCollectDocuments ? 'flex-end' : 'flex-start',
+                        }}
+                      >
+                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'white', display: 'block' }} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ border: '1px solid #E2E6F0', borderRadius: 12, background: 'white', padding: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>Ask about tax situation</div>
+                        <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>
+                          Let it ask simple fact-finding questions when helpful.
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, aiCollectTaxSituation: !prev.aiCollectTaxSituation }))}
+                        style={{
+                          width: 54,
+                          height: 30,
+                          borderRadius: 9999,
+                          border: 'none',
+                          background: form.aiCollectTaxSituation ? 'var(--brand-primary, #3B6FE8)' : '#D1D5DB',
+                          padding: 4,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: form.aiCollectTaxSituation ? 'flex-end' : 'flex-start',
+                        }}
+                      >
+                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'white', display: 'block' }} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <label style={{ display: 'block', marginTop: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 8 }}>
+                    Questions to ask
+                  </div>
+                  <textarea
+                    value={form.aiCustomQuestionsText}
+                    onChange={(e) => setForm((prev) => ({ ...prev, aiCustomQuestionsText: e.target.value }))}
+                    placeholder={'One question per line\nDid you move states this year?\nAny new dependents?\nDid you have self-employment income?'}
+                    rows={5}
+                    style={{
+                      width: '100%',
+                      border: '1px solid #D7DCE8',
+                      borderRadius: 10,
+                      padding: '12px 14px',
+                      fontSize: 15,
+                      color: '#1A1A1A',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      resize: 'vertical',
+                    }}
+                  />
+                  <div style={{ marginTop: 8, fontSize: 12, lineHeight: 1.5, color: '#9CA3AF' }}>
+                    Add up to 8 short questions. The assistant will work them in naturally when relevant.
+                  </div>
+                </label>
+
+                <div style={{ border: '1px solid #E2E6F0', borderRadius: 12, background: 'white', padding: 14, marginTop: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>Ask for a review when client is done</div>
+                      <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>
+                        When you mark a client done from the profile page, TaxPing can send a closing review request automatically.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setForm((prev) => ({ ...prev, aiReviewRequestEnabled: !prev.aiReviewRequestEnabled }))}
+                      style={{
+                        width: 54,
+                        height: 30,
+                        borderRadius: 9999,
+                        border: 'none',
+                        background: form.aiReviewRequestEnabled ? 'var(--brand-primary, #3B6FE8)' : '#D1D5DB',
+                        padding: 4,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: form.aiReviewRequestEnabled ? 'flex-end' : 'flex-start',
+                      }}
+                    >
+                      <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'white', display: 'block' }} />
+                    </button>
+                  </div>
+
+                  <label style={{ display: 'block', marginTop: 16 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 8 }}>
+                      Review request message
+                    </div>
+                    <textarea
+                      value={form.aiReviewRequestMessage}
+                      disabled={!form.aiReviewRequestEnabled}
+                      onChange={(e) => setForm((prev) => ({ ...prev, aiReviewRequestMessage: e.target.value.slice(0, 280) }))}
+                      placeholder="If this was helpful, we would really appreciate a quick review."
+                      rows={3}
+                      style={{
+                        width: '100%',
+                        border: '1px solid #D7DCE8',
+                        borderRadius: 10,
+                        padding: '12px 14px',
+                        fontSize: 15,
+                        color: form.aiReviewRequestEnabled ? '#1A1A1A' : '#9CA3AF',
+                        background: form.aiReviewRequestEnabled ? 'white' : '#F8FAFC',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        resize: 'vertical',
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+              )}
+
+              {activeTab === 'business' && (
               <div style={{
                 border: '1px solid #E2E6F0',
                 borderRadius: 12,
@@ -726,6 +1097,7 @@ export default function Settings() {
                   </div>
                 </label>
               </div>
+              )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <button
@@ -766,12 +1138,91 @@ export default function Settings() {
                 detail="This is the number clients text when sending documents to TaxPing."
               />
               <DetailCard
-                icon={<HardDrive size={16} />}
+                icon={<SiGoogledrive size={16} color="default" />}
                 label="Google Drive"
                 value={loading ? 'Loading…' : preparer.driveConnected ? 'Connected' : 'Needs setup'}
                 tone={preparer.driveConnected ? 'success' : 'warning'}
                 detail="Incoming client documents are saved to your Drive workspace when this connection is active."
               />
+              {activeTab === 'ai' && (
+              <div style={{
+                border: '1px solid #E2E6F0',
+                borderRadius: 12,
+                background: 'white',
+                padding: 18,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 14,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    background: 'var(--brand-primary-light, #EEF2FF)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--brand-primary, #3B6FE8)',
+                  }}>
+                    <MessageSquare size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+                      Assistant preview
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A', marginTop: 4 }}>
+                      Sample text message
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, lineHeight: 1.6, color: '#6B7280' }}>
+                  This is the kind of text your clients can expect from the assistant.
+                </div>
+                <div style={{
+                  borderRadius: 18,
+                  border: '1px solid #E2E8F0',
+                  background: '#F8FAFC',
+                  padding: 14,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>
+                      {trimmedBusinessName || 'Your business'} assistant
+                    </div>
+                    <div style={{
+                      padding: '5px 8px',
+                      borderRadius: 999,
+                      background: 'white',
+                      border: '1px solid #E2E8F0',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: '#6B7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }}>
+                      {selectedAiTone?.label ?? 'Friendly'}
+                    </div>
+                  </div>
+                  <div style={{
+                    maxWidth: 280,
+                    borderRadius: '16px 16px 16px 6px',
+                    background: 'white',
+                    border: '1px solid #E2E8F0',
+                    padding: '12px 14px',
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                    color: '#1A1A1A',
+                    boxShadow: '0 10px 24px rgba(15,23,42,0.06)',
+                  }}>
+                    {assistantPreview}
+                  </div>
+                </div>
+              </div>
+              )}
+              {activeTab === 'business' && (
               <div style={{
                 border: '1px solid #E2E6F0',
                 borderRadius: 12,
@@ -866,6 +1317,8 @@ export default function Settings() {
                   </div>
                 </div>
               </div>
+              )}
+              {activeTab === 'business' && (
               <div style={{
                 border: '1px solid #E2E6F0',
                 borderRadius: 12,
@@ -973,6 +1426,7 @@ export default function Settings() {
                   </Link>
                 </div>
               </div>
+              )}
             </div>
           </div>
         </div>

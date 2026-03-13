@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { SiInstagram } from '@icons-pack/react-simple-icons';
 import {
   Copy,
   Download,
   ExternalLink,
   Globe,
-  Instagram,
   Linkedin,
   Phone,
   QrCode,
@@ -90,7 +90,7 @@ export default function PublicQr() {
 
   function renderBrandLinkIcon(kind: 'website' | 'instagram' | 'linkedin') {
     if (kind === 'website') return <Globe size={14} />;
-    if (kind === 'instagram') return <Instagram size={14} />;
+    if (kind === 'instagram') return <SiInstagram size={14} color="default" />;
     return <Linkedin size={14} />;
   }
 

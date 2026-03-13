@@ -12,6 +12,11 @@ export type ConversationContext = {
   clientName: string;
   docsCollected: string[];
   docsPending: string[];
+  assistantTone: 'friendly' | 'calm' | 'direct';
+  clientNotes?: string | null;
+  collectDocuments: boolean;
+  collectTaxSituation: boolean;
+  customQuestions: string[];
   lastAction: LastAction;
   docTypeReceived?: string;
   employerName?: string;
@@ -27,13 +32,37 @@ function buildSystemPrompt(ctx: ConversationContext): string {
     ctx.docsCollected.length > 0 ? ctx.docsCollected.join(', ') : 'none yet';
   const pending =
     ctx.docsPending.length > 0 ? ctx.docsPending.join(', ') : 'none — all collected!';
+  const toneInstruction =
+    ctx.assistantTone === 'calm'
+      ? 'Keep the tone calm, reassuring, and steady.'
+      : ctx.assistantTone === 'direct'
+        ? 'Keep the tone clear, efficient, and straightforward.'
+        : 'Keep the tone friendly, warm, and easy to understand.';
+  const clientNotes = ctx.clientNotes?.trim()
+    ? `Firm guidance to follow in every reply: ${ctx.clientNotes.trim()}\n\n`
+    : '';
+  const collectionGoals = [
+    ctx.collectDocuments
+      ? 'You should actively help collect needed tax documents.'
+      : 'Do not push for additional document uploads unless the client asks.',
+    ctx.collectTaxSituation
+      ? 'You should also ask short, practical questions about the client tax situation when helpful.'
+      : 'Do not dig into the client tax situation beyond what is necessary for document collection.',
+  ].join(' ');
+  const customQuestions = ctx.customQuestions.length > 0
+    ? `Questions the firm wants covered when relevant: ${ctx.customQuestions.join(' | ')}\n\n`
+    : '';
 
   return (
     `You are a friendly tax document assistant working for ${ctx.preparerName}. ` +
     `You are texting with their client ${ctx.clientName} to collect tax documents.\n\n` +
     `Documents already collected: ${collected}\n` +
     `Documents still needed: ${pending}\n\n` +
-    `Keep replies conversational, warm, and brief. ` +
+    clientNotes +
+    customQuestions +
+    `${collectionGoals}\n` +
+    `${toneInstruction} ` +
+    `Keep replies conversational and brief. ` +
     `Aim for under 160 characters when possible (SMS segment cost).\n` +
     `Never give tax advice. Never ask for SSNs or passwords.\n` +
     `If all documents are collected, thank the client and say the preparer will be in touch.`

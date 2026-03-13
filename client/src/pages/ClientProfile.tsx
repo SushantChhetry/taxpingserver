@@ -12,8 +12,9 @@ import {
   Phone,
   Send,
   Sparkles,
+  Star,
 } from 'lucide-react';
-import { getClientProfile, getDashboard, sendMessage, sendReminder, sendRequest } from '../api';
+import { getClientProfile, getDashboard, markClientDone, sendMessage, sendReminder, sendRequest } from '../api';
 import type { ClientProfileData, DashboardData, Message } from '../types';
 import { getInitials } from '../utils/time';
 import { toast, ToastContainer } from '../components/Toast';
@@ -225,7 +226,7 @@ export default function ClientProfile() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actioning, setActioning] = useState<'request' | 'reminder' | null>(null);
+  const [actioning, setActioning] = useState<'request' | 'reminder' | 'complete' | null>(null);
   const [compose, setCompose] = useState('');
   const [sending, setSending] = useState(false);
   const [showAllMessages, setShowAllMessages] = useState(false);
@@ -320,7 +321,7 @@ export default function ClientProfile() {
     setProfile(fresh);
   }
 
-  async function handleAction(action: 'request' | 'reminder') {
+  async function handleAction(action: 'request' | 'reminder' | 'complete') {
     if (!clientId || clientId === 'demo') {
       toast('This is a demo client.', 'error');
       return;
@@ -331,6 +332,14 @@ export default function ClientProfile() {
       if (action === 'request') {
         await sendRequest(clientId);
         toast(`Request sent to ${client?.name}`, 'success');
+      } else if (action === 'complete') {
+        const result = await markClientDone(clientId);
+        toast(
+          result.reviewRequested
+            ? `Marked done and sent review text to ${client?.name}`
+            : `Marked ${client?.name} as done`,
+          'success'
+        );
       } else {
         await sendReminder(clientId);
         toast(`Reminder sent to ${client?.name}`, 'success');
@@ -699,6 +708,17 @@ export default function ClientProfile() {
                     onClick={() => void handleAction('reminder')}
                     disabled={actioning !== null}
                     primary
+                  />
+                )}
+
+                {(status === 'in_progress' || status === 'complete') && (
+                  <ProfileActionButton
+                    icon={<Star size={16} />}
+                    label={actioning === 'complete' ? 'Marking done...' : 'Mark client done'}
+                    detail="Close this client out. If enabled in AI setup, TaxPing will also text a quick review request."
+                    onClick={() => void handleAction('complete')}
+                    disabled={actioning !== null}
+                    primary={status === 'complete'}
                   />
                 )}
 

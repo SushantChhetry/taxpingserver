@@ -32,6 +32,13 @@ export async function sendReminder(clientId: string): Promise<void> {
   await http.post(`/clients/${clientId}/followup`);
 }
 
+export async function markClientDone(
+  clientId: string
+): Promise<{ success: boolean; reviewRequested: boolean; reviewMessage: string | null }> {
+  const { data } = await http.post(`/clients/${clientId}/complete`);
+  return data;
+}
+
 export async function getClientProfile(clientId: string): Promise<ClientProfileData> {
   const { data } = await http.get<ClientProfileData>(`/clients/${clientId}/profile`);
   return data;
@@ -53,6 +60,13 @@ export async function updatePreparerSettings(
     websiteUrl: string;
     instagramUrl: string;
     linkedinUrl: string;
+    aiTone: 'friendly' | 'calm' | 'direct';
+    aiClientNotes: string;
+    aiCollectDocuments: boolean;
+    aiCollectTaxSituation: boolean;
+    aiCustomQuestions: string[];
+    aiReviewRequestEnabled: boolean;
+    aiReviewRequestMessage: string;
     autoFollowupEnabled: boolean;
     autoFollowupHours: number;
   }

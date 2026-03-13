@@ -19,6 +19,11 @@ async function sendFollowup(conv: ConversationForFollowup): Promise<void> {
     clientName: conv.client_name,
     docsCollected: conv.docs_collected,
     docsPending: conv.docs_pending,
+    assistantTone: conv.ai_tone,
+    clientNotes: conv.ai_client_notes,
+    collectDocuments: conv.ai_collect_documents,
+    collectTaxSituation: conv.ai_collect_tax_situation,
+    customQuestions: conv.ai_custom_questions,
     lastAction: 'followup_reminder',
   });
 

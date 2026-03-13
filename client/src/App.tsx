@@ -9,6 +9,8 @@ import Season from './pages/Season';
 import PublicQr from './pages/PublicQr';
 import PublicSignup from './pages/PublicSignup';
 import PublicLaunch from './pages/PublicLaunch';
+import LandingPage from './pages/LandingPage';
+import LandingTryText from './pages/LandingTryText';
 import DashboardThemeProvider from './components/DashboardThemeProvider';
 
 const PILOT_PREPARER_ID = 'feb93713-91a6-474f-8d56-cebdd606ebff';
@@ -125,6 +127,12 @@ function AppMetadata() {
     } else if (/^\/public\/[^/]+\/connect\/?$/.test(path)) {
       title = 'Connect | TaxPing';
       description = 'Launch the client handoff experience and connect the conversation back into TaxPing.';
+    } else if (/^\/landing\/try-text\/?$/.test(path)) {
+      title = 'Text TaxPing | TaxPing';
+      description = 'Open a prefilled text message to TaxPing from your phone.';
+    } else if (/^\/landing\/?$/.test(path)) {
+      title = 'TaxPing | Text-first Tax Prep Intake';
+      description = 'See how TaxPing turns tax document collection into a smoother client flow with branded entry points, texting, reminders, and dashboard visibility.';
     }
 
     document.title = title;
@@ -141,6 +149,8 @@ export default function App() {
         <AppMetadata />
         <Routes>
           <Route path="/" element={<Navigate to={`/dashboard/${PILOT_PREPARER_ID}/overview`} replace />} />
+          <Route path="/landing" element={<LandingPage />} />
+          <Route path="/landing/try-text" element={<LandingTryText />} />
           <Route path="/dashboard/:preparerId/overview" element={<Overview />} />
           <Route
             path="/dashboard/:preparerId"

@@ -62,6 +62,16 @@ export interface BrandProfile {
   linkedinUrl: string | null;
 }
 
+export interface AiAssistantProfile {
+  tone: 'friendly' | 'calm' | 'direct';
+  clientNotes: string | null;
+  collectDocuments: boolean;
+  collectTaxSituation: boolean;
+  customQuestions: string[];
+  reviewRequestEnabled: boolean;
+  reviewRequestMessage: string | null;
+}
+
 export interface PreparerSettingsData {
   preparer: {
     id: string;
@@ -72,6 +82,7 @@ export interface PreparerSettingsData {
     autoFollowupHours: number;
     twilioNumber: string | null;
     driveConnected: boolean;
+    aiAssistant: AiAssistantProfile;
     branding: BrandProfile;
   };
 }

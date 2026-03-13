@@ -83,7 +83,7 @@ export default function Sidebar({
   const workspaceName = businessName?.trim() || preparerName;
 
   return (
-    <div style={{
+    <div className="app-sidebar" style={{
       width: 240,
       minWidth: 240,
       height: '100vh',
@@ -96,7 +96,7 @@ export default function Sidebar({
       left: 0,
       zIndex: 10,
     }}>
-      <div style={{ padding: '20px 16px 12px' }}>
+      <div className="app-sidebar-brand" style={{ padding: '20px 16px 12px' }}>
         <img
           src={logo}
           alt="TaxPing"
@@ -116,19 +116,19 @@ export default function Sidebar({
         </div>
       </div>
 
-      <nav style={{ flex: 1, padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <nav className="app-sidebar-nav" style={{ flex: 1, padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <NavItem icon={<LayoutDashboard size={15} />} label="Overview" active={activeNav === 'Overview'} to={`/dashboard/${preparerId}/overview`} />
         <NavItem icon={<Users size={15} />} label="Clients" active={activeNav === 'Clients'} to={`/dashboard/${preparerId}`} />
         <NavItem icon={<Inbox size={15} />} label="Messages" active={activeNav === 'Messages'} to={`/dashboard/${preparerId}/messages`} />
         <NavItem icon={<Calendar size={15} />} label="Season" active={activeNav === 'Season'} to={`/dashboard/${preparerId}/season`} />
       </nav>
 
-      <div style={{ padding: '12px 16px', borderTop: '1px solid #E2E6F0' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 12 }}>
+      <div className="app-sidebar-footer" style={{ padding: '12px 16px', borderTop: '1px solid #E2E6F0' }}>
+        <div className="app-sidebar-footer-nav" style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 12 }}>
           <NavItem icon={<HelpCircle size={15} />} label="Help" active={activeNav === 'Help'} to={`/dashboard/${preparerId}/help`} />
           <NavItem icon={<Settings size={15} />} label="Settings" active={activeNav === 'Settings'} to={`/dashboard/${preparerId}/settings`} />
         </div>
-        <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 12 }}>
+        <div className="app-sidebar-account" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{
               width: 28,

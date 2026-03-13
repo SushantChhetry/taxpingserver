@@ -7,10 +7,12 @@ import {
   getPreparerDashboard,
   getPreparerSettings,
   updatePreparerSettings,
+  getClientCompletionContext,
   getClientWithTwilio,
   getClientProfile,
   getOrCreateConversation,
   insertMessage,
+  markConversationComplete,
   createClient,
   type ClientDashboardRow,
   type DashboardData,
@@ -88,6 +90,32 @@ function normalizeHttpUrl(value: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+function normalizeAssistantTone(value: unknown): 'friendly' | 'calm' | 'direct' | null {
+  if (value !== 'friendly' && value !== 'calm' && value !== 'direct') return null;
+  return value;
+}
+
+function normalizeStringArray(value: unknown, maxItems: number, maxLength: number): string[] | null {
+  if (!Array.isArray(value)) return null;
+
+  const normalized = value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, maxItems);
+
+  if (normalized.some((item) => item.length > maxLength)) return null;
+  return normalized;
+}
+
+function buildReviewRequestMessage(
+  businessName: string,
+  customMessage: string | null
+): string {
+  if (customMessage?.trim()) return customMessage.trim();
+  return `Thanks again for working with ${businessName}. If the process felt smooth, we would really appreciate a quick review.`;
 }
 
 function getTaxYearOptions(selectedYears: number[] = []): number[] {
@@ -553,6 +581,47 @@ async function handleSendFollowup(
   }
 }
 
+async function handleMarkClientDone(
+  req: Request<{ clientId: string }>,
+  res: Response
+): Promise<void> {
+  try {
+    const client = await getClientCompletionContext(req.params.clientId);
+    if (!client) { res.status(404).json({ error: 'Client not found' }); return; }
+
+    const profile = await getClientProfile(client.id);
+    const alreadyComplete = profile?.conversation?.status === 'complete';
+    const conversation =
+      profile?.conversation
+        ? profile.conversation
+        : await getOrCreateConversation(client.id, client.tax_year);
+
+    if (!alreadyComplete) {
+      await markConversationComplete(conversation.id);
+    }
+
+    let reviewMessage: string | null = null;
+    if (client.ai_review_request_enabled && !alreadyComplete) {
+      reviewMessage = buildReviewRequestMessage(
+        getPreparerDisplayName(client.preparer_name, client.business_name),
+        client.ai_review_request_message
+      );
+      await sendSMS({ to: client.mobile, from: client.twilio_number, body: reviewMessage });
+      await insertMessage({
+        conversation_id: conversation.id,
+        direction: 'outbound',
+        body: reviewMessage,
+        media_url: null,
+      });
+    }
+
+    res.json({ success: true, reviewRequested: Boolean(reviewMessage), reviewMessage });
+  } catch (err) {
+    console.error('[dashboard] markClientDone error:', err);
+    res.status(500).json({ error: 'Failed to mark client done' });
+  }
+}
+
 function mapPreparerSettingsResponse(data: Awaited<ReturnType<typeof getPreparerSettings>>) {
   if (!data) return null;
 
@@ -566,6 +635,15 @@ function mapPreparerSettingsResponse(data: Awaited<ReturnType<typeof getPreparer
       autoFollowupHours: data.auto_followup_hours,
       twilioNumber: data.twilio_number,
       driveConnected: Boolean(data.drive_folder_id),
+      aiAssistant: {
+        tone: data.ai_tone,
+        clientNotes: data.ai_client_notes,
+        collectDocuments: data.ai_collect_documents,
+        collectTaxSituation: data.ai_collect_tax_situation,
+        customQuestions: data.ai_custom_questions,
+        reviewRequestEnabled: data.ai_review_request_enabled,
+        reviewRequestMessage: data.ai_review_request_message,
+      },
       branding: {
         themeId: data.brand_theme_id,
         color: data.brand_color,
@@ -607,6 +685,13 @@ async function handleUpdatePreparerSettings(
       websiteUrl,
       instagramUrl,
       linkedinUrl,
+      aiTone,
+      aiClientNotes,
+      aiCollectDocuments,
+      aiCollectTaxSituation,
+      aiCustomQuestions,
+      aiReviewRequestEnabled,
+      aiReviewRequestMessage,
       autoFollowupEnabled,
       autoFollowupHours,
     } = req.body as {
@@ -618,6 +703,13 @@ async function handleUpdatePreparerSettings(
       websiteUrl?: string;
       instagramUrl?: string;
       linkedinUrl?: string;
+      aiTone?: 'friendly' | 'calm' | 'direct';
+      aiClientNotes?: string;
+      aiCollectDocuments?: boolean;
+      aiCollectTaxSituation?: boolean;
+      aiCustomQuestions?: string[];
+      aiReviewRequestEnabled?: boolean;
+      aiReviewRequestMessage?: string;
       autoFollowupEnabled?: boolean;
       autoFollowupHours?: number;
     };
@@ -674,6 +766,45 @@ async function handleUpdatePreparerSettings(
       return;
     }
 
+    const normalizedAiTone = normalizeAssistantTone(aiTone ?? 'friendly');
+    if (!normalizedAiTone) {
+      res.status(400).json({ error: 'aiTone must be friendly, calm, or direct' });
+      return;
+    }
+
+    const normalizedAiClientNotes = normalizeOptionalText(aiClientNotes);
+    if (normalizedAiClientNotes && normalizedAiClientNotes.length > 280) {
+      res.status(400).json({ error: 'aiClientNotes must be 280 characters or less' });
+      return;
+    }
+
+    if (typeof aiCollectDocuments !== 'boolean') {
+      res.status(400).json({ error: 'aiCollectDocuments must be a boolean' });
+      return;
+    }
+
+    if (typeof aiCollectTaxSituation !== 'boolean') {
+      res.status(400).json({ error: 'aiCollectTaxSituation must be a boolean' });
+      return;
+    }
+
+    const normalizedAiCustomQuestions = normalizeStringArray(aiCustomQuestions, 8, 120);
+    if (!normalizedAiCustomQuestions) {
+      res.status(400).json({ error: 'aiCustomQuestions must be an array of short questions' });
+      return;
+    }
+
+    if (typeof aiReviewRequestEnabled !== 'boolean') {
+      res.status(400).json({ error: 'aiReviewRequestEnabled must be a boolean' });
+      return;
+    }
+
+    const normalizedAiReviewRequestMessage = normalizeOptionalText(aiReviewRequestMessage);
+    if (normalizedAiReviewRequestMessage && normalizedAiReviewRequestMessage.length > 280) {
+      res.status(400).json({ error: 'aiReviewRequestMessage must be 280 characters or less' });
+      return;
+    }
+
     const followupHours = autoFollowupHours;
 
     const updated = await updatePreparerSettings(req.params.preparerId, {
@@ -685,6 +816,13 @@ async function handleUpdatePreparerSettings(
       websiteUrl: normalizedWebsiteUrl,
       instagramUrl: normalizedInstagramUrl,
       linkedinUrl: normalizedLinkedinUrl,
+      aiTone: normalizedAiTone,
+      aiClientNotes: normalizedAiClientNotes,
+      aiCollectDocuments,
+      aiCollectTaxSituation,
+      aiCustomQuestions: normalizedAiCustomQuestions,
+      aiReviewRequestEnabled,
+      aiReviewRequestMessage: normalizedAiReviewRequestMessage,
       autoFollowupEnabled,
       autoFollowupHours: followupHours,
     });
@@ -775,6 +913,9 @@ router.post('/clients/:clientId/request', (req, res) =>
 router.post('/clients/:clientId/followup', (req, res) =>
   handleSendFollowup(req as Request<{ clientId: string }>, res)
 );
+router.post('/clients/:clientId/complete', (req, res) =>
+  handleMarkClientDone(req as Request<{ clientId: string }>, res)
+);
 
 // JSON API routes (with /api prefix)
 router.get('/api/dashboard/:preparerId', (req, res) =>
@@ -792,6 +933,9 @@ router.post('/api/clients/:clientId/request', (req, res) =>
 );
 router.post('/api/clients/:clientId/followup', (req, res) =>
   handleSendFollowup(req as Request<{ clientId: string }>, res)
+);
+router.post('/api/clients/:clientId/complete', (req, res) =>
+  handleMarkClientDone(req as Request<{ clientId: string }>, res)
 );
 router.post('/api/clients/:clientId/message', async (req: Request<{ clientId: string }>, res: Response) => {
   try {

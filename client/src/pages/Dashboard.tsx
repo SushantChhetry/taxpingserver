@@ -166,10 +166,25 @@ function ClientRow({ client, preparerId, onSendRequest, onSendReminder, actionLo
   const navigate = useNavigate();
   const { id, name, mobile, status, docsCollected, docsPending, lastReplyAt, driveFolderId, taxYear } = client;
   const driveUrl = driveFolderId ? `https://drive.google.com/drive/folders/${driveFolderId}` : null;
+  const detailHref = `/dashboard/${preparerId}/client/${id}`;
+
+  function openClientProfile() {
+    navigate(detailHref);
+  }
 
   return (
     <div
       className="dashboard-row"
+      role="link"
+      tabIndex={0}
+      aria-label={`Open ${name}`}
+      onClick={openClientProfile}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openClientProfile();
+        }
+      }}
       style={{
         display: 'grid',
         gridTemplateColumns: TABLE_COLUMNS,
@@ -180,9 +195,10 @@ function ClientRow({ client, preparerId, onSendRequest, onSendReminder, actionLo
         padding: '16px 18px',
         borderRadius: 20,
         border: '1px solid #E5EBF4',
+        cursor: 'pointer',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+      <div className="dashboard-row-cell dashboard-row-cell-client" style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
         <div
           style={{
             width: 42,
@@ -205,7 +221,10 @@ function ClientRow({ client, preparerId, onSendRequest, onSendReminder, actionLo
             <button
               type="button"
               className="dashboard-row-name"
-              onClick={() => navigate(`/dashboard/${preparerId}/client/${id}`)}
+              onClick={(event) => {
+                event.stopPropagation();
+                openClientProfile();
+              }}
               style={{
                 border: 'none',
                 background: 'none',
@@ -246,18 +265,21 @@ function ClientRow({ client, preparerId, onSendRequest, onSendReminder, actionLo
         </div>
       </div>
 
-      <div style={{ minWidth: 0 }}>
+      <div className="dashboard-row-cell dashboard-row-cell-status" style={{ minWidth: 0 }}>
+        <div className="dashboard-row-mobile-label">Status</div>
         <StatusBadge status={status} />
       </div>
 
-      <div style={{ minWidth: 0 }}>
+      <div className="dashboard-row-cell dashboard-row-cell-docs" style={{ minWidth: 0 }}>
+        <div className="dashboard-row-mobile-label">Docs</div>
         <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: '#1A1A1A' }}>{docsCollected}</div>
         <div style={{ marginTop: 5, fontSize: 12, color: '#7B879D', whiteSpace: 'nowrap' }}>
           {docsCollected === 0 ? 'No uploads yet' : 'Saved to Drive'}
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', overflow: 'hidden', minWidth: 0 }}>
+      <div className="dashboard-row-cell dashboard-row-cell-waiting" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
+        <div className="dashboard-row-mobile-label">Waiting On</div>
         {docsPending.length === 0 ? (
           <span
             style={{
@@ -281,10 +303,11 @@ function ClientRow({ client, preparerId, onSendRequest, onSendReminder, actionLo
             {status === 'complete' ? 'Ready to review' : 'Nothing pending'}
           </span>
         ) : (
-          <>
+          docsPending.map((doc) => (
             <span
+              key={doc}
               style={{
-                maxWidth: 128,
+                maxWidth: '100%',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -295,38 +318,17 @@ function ClientRow({ client, preparerId, onSendRequest, onSendReminder, actionLo
                 fontSize: 11,
                 padding: '6px 10px',
                 fontWeight: 600,
-                flexShrink: 0,
               }}
-              title={docsPending[0]}
+              title={doc}
             >
-              {docsPending[0]}
+              {doc}
             </span>
-            {docsPending.length > 1 && (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minWidth: 34,
-                  height: 26,
-                  padding: '0 8px',
-                  borderRadius: 999,
-                  background: '#FFF4E6',
-                  color: '#C2410C',
-                  border: '1px solid #F8D4A4',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
-              >
-                +{docsPending.length - 1}
-              </span>
-            )}
-          </>
+          ))
         )}
       </div>
 
-      <div style={{ minWidth: 0 }}>
+      <div className="dashboard-row-cell dashboard-row-cell-reply" style={{ minWidth: 0 }}>
+        <div className="dashboard-row-mobile-label">Last Reply</div>
         <div style={{ fontSize: 13, fontWeight: 600, color: lastReplyAt ? '#1A1A1A' : '#8B97B0', whiteSpace: 'nowrap' }}>
           {formatRelativeTime(lastReplyAt)}
         </div>
@@ -335,7 +337,13 @@ function ClientRow({ client, preparerId, onSendRequest, onSendReminder, actionLo
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'nowrap', minWidth: 0 }}>
+      <div
+        className="dashboard-row-cell dashboard-row-cell-actions"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'nowrap', minWidth: 0 }}
+      >
+        <div className="dashboard-row-mobile-label">Action</div>
         {status === 'not_started' && (
           <ActionButton
             label="Send Request"
@@ -516,12 +524,6 @@ export default function Dashboard() {
   const waitingOnDocsCount = clients.filter(
     (client) => client.status === 'in_progress' && client.docsPending.length > 0,
   ).length;
-  const activeFilterCount = [
-    searchLower !== '',
-    workflowFilter !== 'all',
-    statusFilter !== 'all',
-    taxYearFilter !== 'all',
-  ].filter(Boolean).length;
   const summaryItems = [
     { label: 'Open files', value: activeCount, background: 'var(--brand-primary-surface, #F5F8FF)', border: 'var(--brand-primary-border, #DCE7FF)', color: 'var(--brand-primary-dark, #21449C)' },
     { label: 'Waiting on docs', value: waitingOnDocsCount, background: '#FFF8F0', border: '#F8D8AD', color: '#B45309' },
@@ -595,7 +597,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ ...getBrandThemeStyle(brandTheme), display: 'flex', minHeight: '100vh', background: '#F7F8FC' }}>
+    <div className="dashboard-root" style={{ ...getBrandThemeStyle(brandTheme), display: 'flex', minHeight: '100vh', background: '#F7F8FC' }}>
       <Sidebar
         preparerId={preparerId ?? ''}
         preparerName={preparer.name}
@@ -897,37 +899,10 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="dashboard-list-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-primary-dark, #132450)' }}>Client list</div>
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: 32,
-                      height: 24,
-                      padding: '0 8px',
-                      borderRadius: 999,
-                      background: 'var(--brand-primary-light, #EEF2FF)',
-                      color: 'var(--brand-primary-dark, #21449C)',
-                      fontSize: 11,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {loading ? '—' : visibleClients.length}
-                  </span>
-                </div>
-                {hasActiveFilters && (
-                  <div style={{ fontSize: 12, color: '#8B97B0' }}>
-                    {activeFilterCount} filter{activeFilterCount === 1 ? '' : 's'} active
-                  </div>
-                )}
-              </div>
-
               <div className="dashboard-table-shell" style={{ marginTop: 18, overflowX: 'auto' }}>
-                <div style={{ minWidth: 1020, display: 'grid', gap: 10 }}>
+                <div className="dashboard-table-grid" style={{ minWidth: 1020, display: 'grid', gap: 10 }}>
                   <div
+                    className="dashboard-table-header"
                     style={{
                       display: 'grid',
                       gridTemplateColumns: TABLE_COLUMNS,
@@ -962,7 +937,57 @@ export default function Dashboard() {
                   </div>
 
                   {loading ? (
-                    Array.from({ length: 8 }).map((_, index) => <SkeletonRow key={index} />)
+                    <>
+                      <div
+                        className="overview-subpanel"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 16,
+                          padding: '16px 18px',
+                          borderRadius: 20,
+                          border: '1px solid #E5EBF4',
+                          background: 'linear-gradient(135deg, rgba(239, 246, 255, 0.88) 0%, rgba(255, 255, 255, 0.98) 62%)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                          <div
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 14,
+                              display: 'grid',
+                              placeItems: 'center',
+                              background: 'rgba(59, 111, 232, 0.12)',
+                              color: 'var(--brand-primary-dark, #21449C)',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Clock3 size={18} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: '#16315F' }}>Loading client list</div>
+                            <div style={{ marginTop: 4, fontSize: 12, color: '#5B6B85' }}>
+                              Pulling live statuses, document counts, and follow-up actions.
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            color: '#6C7FA3',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Syncing workspace
+                        </div>
+                      </div>
+                      {Array.from({ length: 7 }).map((_, index) => <SkeletonRow key={index} index={index} />)}
+                    </>
                   ) : visibleClients.length === 0 ? (
                     <div
                       className="overview-subpanel"

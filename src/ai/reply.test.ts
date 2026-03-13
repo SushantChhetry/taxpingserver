@@ -18,6 +18,11 @@ const base: Omit<ConversationContext, 'lastAction'> = {
   clientName: 'Bob Smith',
   docsCollected: ['w2'],
   docsPending: ['1099_nec', '1098'],
+  assistantTone: 'friendly',
+  clientNotes: null,
+  collectDocuments: true,
+  collectTaxSituation: false,
+  customQuestions: [],
 };
 
 beforeEach(() => {
@@ -57,6 +62,38 @@ describe('generateReply', () => {
     const userPrompt = call.messages[0].content as string;
     expect(userPrompt).toContain('Acme Corp');
     expect(userPrompt).toContain('w2');
+  });
+
+  it('includes assistant tone and client notes in the system prompt', async () => {
+    mockCreate.mockResolvedValueOnce(makeApiResponse('Message'));
+
+    await generateReply({
+      ...base,
+      assistantTone: 'calm',
+      clientNotes: 'Mention that we usually review uploads within one business day.',
+      lastAction: 'conversation_start',
+    });
+
+    const call = mockCreate.mock.calls[0][0] as { system: string };
+    expect(call.system).toContain('calm, reassuring, and steady');
+    expect(call.system).toContain('review uploads within one business day');
+  });
+
+  it('includes collection goals and custom questions in the system prompt', async () => {
+    mockCreate.mockResolvedValueOnce(makeApiResponse('Message'));
+
+    await generateReply({
+      ...base,
+      collectDocuments: false,
+      collectTaxSituation: true,
+      customQuestions: ['Did you move states?', 'Do you have any new dependents?'],
+      lastAction: 'conversation_start',
+    });
+
+    const call = mockCreate.mock.calls[0][0] as { system: string };
+    expect(call.system).toContain('Do not push for additional document uploads');
+    expect(call.system).toContain('ask short, practical questions about the client tax situation');
+    expect(call.system).toContain('Did you move states?');
   });
 
   it('returns reply for doc_received with no pending docs', async () => {

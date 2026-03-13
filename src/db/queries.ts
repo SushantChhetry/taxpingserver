@@ -17,6 +17,13 @@ export type Preparer = {
   website_url: string | null;
   instagram_url: string | null;
   linkedin_url: string | null;
+  ai_tone: 'friendly' | 'calm' | 'direct';
+  ai_client_notes: string | null;
+  ai_collect_documents: boolean;
+  ai_collect_tax_situation: boolean;
+  ai_custom_questions: string[];
+  ai_review_request_enabled: boolean;
+  ai_review_request_message: string | null;
   drive_folder_id: string | null;
   drive_tokens: DriveTokens | null;
   auto_followup_enabled: boolean;
@@ -51,6 +58,13 @@ export type ConversationForFollowup = ConversationWithClient & {
   client_name: string;
   preparer_name: string;
   preparer_business_name: string | null;
+  ai_tone: 'friendly' | 'calm' | 'direct';
+  ai_client_notes: string | null;
+  ai_collect_documents: boolean;
+  ai_collect_tax_situation: boolean;
+  ai_custom_questions: string[];
+  ai_review_request_enabled: boolean;
+  ai_review_request_message: string | null;
   preparer_twilio_number: string;
 };
 
@@ -98,6 +112,13 @@ export type PreparerSettings = Pick<
   | 'website_url'
   | 'instagram_url'
   | 'linkedin_url'
+  | 'ai_tone'
+  | 'ai_client_notes'
+  | 'ai_collect_documents'
+  | 'ai_collect_tax_situation'
+  | 'ai_custom_questions'
+  | 'ai_review_request_enabled'
+  | 'ai_review_request_message'
   | 'drive_folder_id'
   | 'auto_followup_enabled'
   | 'auto_followup_hours'
@@ -303,6 +324,13 @@ export async function getPreparerSettings(
             p.website_url,
             p.instagram_url,
             p.linkedin_url,
+            p.ai_tone,
+            p.ai_client_notes,
+            p.ai_collect_documents,
+            p.ai_collect_tax_situation,
+            p.ai_custom_questions,
+            p.ai_review_request_enabled,
+            p.ai_review_request_message,
             p.drive_folder_id,
             p.auto_followup_enabled,
             p.auto_followup_hours,
@@ -353,6 +381,13 @@ export async function updatePreparerSettings(
     websiteUrl: string | null;
     instagramUrl: string | null;
     linkedinUrl: string | null;
+    aiTone: 'friendly' | 'calm' | 'direct';
+    aiClientNotes: string | null;
+    aiCollectDocuments: boolean;
+    aiCollectTaxSituation: boolean;
+    aiCustomQuestions: string[];
+    aiReviewRequestEnabled: boolean;
+    aiReviewRequestMessage: string | null;
     autoFollowupEnabled: boolean;
     autoFollowupHours: number;
   }
@@ -367,8 +402,15 @@ export async function updatePreparerSettings(
          website_url = $7,
          instagram_url = $8,
          linkedin_url = $9,
-         auto_followup_enabled = $10,
-         auto_followup_hours = $11
+         ai_tone = $10,
+         ai_client_notes = $11,
+         ai_collect_documents = $12,
+         ai_collect_tax_situation = $13,
+         ai_custom_questions = $14,
+         ai_review_request_enabled = $15,
+         ai_review_request_message = $16,
+         auto_followup_enabled = $17,
+         auto_followup_hours = $18
      WHERE id = $1
      RETURNING id`,
     [
@@ -381,6 +423,13 @@ export async function updatePreparerSettings(
       input.websiteUrl,
       input.instagramUrl,
       input.linkedinUrl,
+      input.aiTone,
+      input.aiClientNotes,
+      input.aiCollectDocuments,
+      input.aiCollectTaxSituation,
+      input.aiCustomQuestions,
+      input.aiReviewRequestEnabled,
+      input.aiReviewRequestMessage,
       input.autoFollowupEnabled,
       input.autoFollowupHours,
     ]
@@ -450,6 +499,13 @@ export async function getStaleConversationsForFollowup(
             cl.name          AS client_name,
             p.name           AS preparer_name,
             p.business_name  AS preparer_business_name,
+            p.ai_tone,
+            p.ai_client_notes,
+            p.ai_collect_documents,
+            p.ai_collect_tax_situation,
+            p.ai_custom_questions,
+            p.ai_review_request_enabled,
+            p.ai_review_request_message,
             pn.twilio_number AS preparer_twilio_number
      FROM conversations c
      JOIN clients cl       ON cl.id = c.client_id
@@ -504,6 +560,11 @@ export type ClientWithTwilio = {
   drive_folder_id: string | null;
   tax_year: number;
   twilio_number: string;
+};
+
+export type ClientCompletionContext = ClientWithTwilio & {
+  ai_review_request_enabled: boolean;
+  ai_review_request_message: string | null;
 };
 
 export async function getPreparerDashboard(preparerId: string): Promise<DashboardData | null> {
@@ -607,6 +668,29 @@ export async function getClientWithTwilio(clientId: string): Promise<ClientWithT
             c.drive_folder_id,
             c.tax_year,
             pn.twilio_number
+     FROM clients c
+     JOIN preparers p ON p.id = c.preparer_id
+     JOIN phone_numbers pn ON pn.preparer_id = c.preparer_id AND pn.active = TRUE
+     WHERE c.id = $1
+     LIMIT 1`,
+    [clientId]
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function getClientCompletionContext(clientId: string): Promise<ClientCompletionContext | null> {
+  const result = await pool.query<ClientCompletionContext>(
+    `SELECT c.id,
+            c.name,
+            c.mobile,
+            c.preparer_id,
+            p.name AS preparer_name,
+            p.business_name,
+            c.drive_folder_id,
+            c.tax_year,
+            pn.twilio_number,
+            p.ai_review_request_enabled,
+            p.ai_review_request_message
      FROM clients c
      JOIN preparers p ON p.id = c.preparer_id
      JOIN phone_numbers pn ON pn.preparer_id = c.preparer_id AND pn.active = TRUE

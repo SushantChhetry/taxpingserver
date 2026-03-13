@@ -46,6 +46,13 @@ const preparer: Preparer = {
   website_url: 'https://alicetax.example.com',
   instagram_url: 'https://instagram.com/alicetax',
   linkedin_url: 'https://linkedin.com/company/alicetax',
+  ai_tone: 'friendly',
+  ai_client_notes: 'Let clients know we usually review documents the same day.',
+  ai_collect_documents: true,
+  ai_collect_tax_situation: false,
+  ai_custom_questions: ['Did you move this year?'],
+  ai_review_request_enabled: false,
+  ai_review_request_message: null,
   drive_folder_id: 'folder-1',
   drive_tokens: null,
   auto_followup_enabled: true,
@@ -132,6 +139,13 @@ describe('getPreparerSettings', () => {
       website_url: preparer.website_url,
       instagram_url: preparer.instagram_url,
       linkedin_url: preparer.linkedin_url,
+      ai_tone: preparer.ai_tone,
+      ai_client_notes: preparer.ai_client_notes,
+      ai_collect_documents: preparer.ai_collect_documents,
+      ai_collect_tax_situation: preparer.ai_collect_tax_situation,
+      ai_custom_questions: preparer.ai_custom_questions,
+      ai_review_request_enabled: preparer.ai_review_request_enabled,
+      ai_review_request_message: preparer.ai_review_request_message,
       drive_folder_id: preparer.drive_folder_id,
       auto_followup_enabled: preparer.auto_followup_enabled,
       auto_followup_hours: preparer.auto_followup_hours,
@@ -164,6 +178,13 @@ describe('updatePreparerSettings', () => {
       website_url: 'https://northstar.example.com',
       instagram_url: 'https://instagram.com/northstar',
       linkedin_url: 'https://linkedin.com/company/northstar',
+      ai_tone: 'calm',
+      ai_client_notes: 'Let clients know we usually answer by the end of the day.',
+      ai_collect_documents: true,
+      ai_collect_tax_situation: true,
+      ai_custom_questions: ['Did you change jobs?', 'Any new dependents this year?'],
+      ai_review_request_enabled: true,
+      ai_review_request_message: 'If this was helpful, we would love a quick review.',
       drive_folder_id: preparer.drive_folder_id,
       auto_followup_enabled: false,
       auto_followup_hours: 72,
@@ -182,6 +203,13 @@ describe('updatePreparerSettings', () => {
       websiteUrl: 'https://northstar.example.com',
       instagramUrl: 'https://instagram.com/northstar',
       linkedinUrl: 'https://linkedin.com/company/northstar',
+      aiTone: 'calm',
+      aiClientNotes: 'Let clients know we usually answer by the end of the day.',
+      aiCollectDocuments: true,
+      aiCollectTaxSituation: true,
+      aiCustomQuestions: ['Did you change jobs?', 'Any new dependents this year?'],
+      aiReviewRequestEnabled: true,
+      aiReviewRequestMessage: 'If this was helpful, we would love a quick review.',
       autoFollowupEnabled: false,
       autoFollowupHours: 72,
     });
@@ -198,8 +226,15 @@ describe('updatePreparerSettings', () => {
     expect(updateSql).toContain('website_url = $7');
     expect(updateSql).toContain('instagram_url = $8');
     expect(updateSql).toContain('linkedin_url = $9');
-    expect(updateSql).toContain('auto_followup_enabled = $10');
-    expect(updateSql).toContain('auto_followup_hours = $11');
+    expect(updateSql).toContain('ai_tone = $10');
+    expect(updateSql).toContain('ai_client_notes = $11');
+    expect(updateSql).toContain('ai_collect_documents = $12');
+    expect(updateSql).toContain('ai_collect_tax_situation = $13');
+    expect(updateSql).toContain('ai_custom_questions = $14');
+    expect(updateSql).toContain('ai_review_request_enabled = $15');
+    expect(updateSql).toContain('ai_review_request_message = $16');
+    expect(updateSql).toContain('auto_followup_enabled = $17');
+    expect(updateSql).toContain('auto_followup_hours = $18');
     expect(updateParams).toEqual([
       preparer.id,
       'North Star Tax',
@@ -210,6 +245,13 @@ describe('updatePreparerSettings', () => {
       'https://northstar.example.com',
       'https://instagram.com/northstar',
       'https://linkedin.com/company/northstar',
+      'calm',
+      'Let clients know we usually answer by the end of the day.',
+      true,
+      true,
+      ['Did you change jobs?', 'Any new dependents this year?'],
+      true,
+      'If this was helpful, we would love a quick review.',
       false,
       72,
     ]);
@@ -409,6 +451,13 @@ describe('getStaleConversationsForFollowup', () => {
       client_name: 'Bob',
       preparer_name: 'Alice',
       preparer_business_name: 'Alice Tax Co',
+      ai_tone: 'friendly',
+      ai_client_notes: null,
+      ai_collect_documents: true,
+      ai_collect_tax_situation: false,
+      ai_custom_questions: [],
+      ai_review_request_enabled: false,
+      ai_review_request_message: null,
       preparer_twilio_number: '+15550009999',
     };
     mockQuery.mockResolvedValueOnce(rows([stale]));
