@@ -7,7 +7,6 @@ import {
   Sparkles,
   Workflow,
 } from 'lucide-react';
-import { SiGoogledrive } from '@icons-pack/react-simple-icons';
 import { Link } from 'react-router-dom';
 import LandingJourneySection from '../components/LandingJourneySection';
 import TaxPingLogo from '../components/TaxPingLogo';
@@ -106,81 +105,79 @@ const CONTACT_CTA_EMAIL = 'pilot@taxping.ai';
 const CALENDLY_SCRIPT_SRC = 'https://assets.calendly.com/assets/external/widget.js';
 const CALENDLY_STYLE_HREF = 'https://assets.calendly.com/assets/external/widget.css';
 
-function DriveIcon() {
-  return <SiGoogledrive className="lp-proof-drive-icon" size={20} color="default" aria-hidden="true" focusable="false" />;
-}
+function HeroWorkflowStage() {
+  const threadMessages = [
+    {
+      side: 'brand' as const,
+      text: "Hi Maria. Send your W-2, 1099-INT, and 2024 return here.",
+    },
+    {
+      side: 'client' as const,
+      text: 'Uploading the first two now.',
+      attachments: ['W-2.jpg', '1099-INT.pdf'],
+    },
+    {
+      side: 'brand' as const,
+      text: 'Got them. I still need your 2024 return.',
+    },
+  ];
 
-function TwoSecondProofCard() {
   return (
-    <div
-      className="lp-proof-card"
-      aria-label="A preparer sends one text, the client replies with a document photo, and the file is saved to Drive automatically."
-    >
-      <div className="lp-proof-moment lp-proof-moment-preparer">
-        <div className="lp-proof-client-row">
-          <span className="lp-proof-avatar">MC</span>
-          <span className="lp-proof-client-name">Maria Chen</span>
+    <div className="lp-hero-phone-frame" aria-label="iPhone mockup showing the TaxPing text exchange">
+      <div className="lp-hero-phone-notch" aria-hidden="true" />
 
-          <div className="lp-proof-action">
-            <button type="button" className="lp-proof-send-button" tabIndex={-1}>
-              Send first text →
-            </button>
-            <span className="lp-proof-cursor" aria-hidden="true" />
-            <span className="lp-proof-collecting">
-              <span className="lp-proof-collecting-dot" aria-hidden="true" />
-              Waiting…
-            </span>
+      <div className="lp-hero-phone-screen">
+        <div className="lp-hero-phone-status" aria-hidden="true">
+          <span>9:41</span>
+          <span>5G</span>
+        </div>
+
+        <div className="lp-hero-phone-topbar">
+          <div className="lp-hero-phone-contact">
+            <span className="lp-hero-phone-contact-avatar">T</span>
+            <div>
+              <strong>TaxPing</strong>
+              <span>iMessage</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="lp-proof-moment lp-proof-moment-phone">
-        <div className="lp-proof-phone">
-          <div className="lp-proof-phone-contact">Jordan Lee CPA</div>
+        <div className="lp-hero-thread" aria-label="TaxPing text exchange">
+          {threadMessages.map((message, index) => (
+            <div
+              key={`${message.side}-${index}-${message.text}`}
+              className={`lp-hero-thread-row ${message.side === 'client' ? 'lp-hero-thread-row-client' : ''}`}
+              style={{ animationDelay: `${140 + index * 120}ms` }}
+            >
+              <div
+                className={[
+                  'lp-hero-thread-bubble',
+                  message.side === 'client'
+                    ? 'lp-hero-thread-bubble-client'
+                    : 'lp-hero-thread-bubble-brand',
+                ].join(' ').trim()}
+              >
+                <span>{message.text}</span>
 
-          <div className="lp-proof-phone-thread">
-            <div className="lp-proof-message lp-proof-message-agent">
-              Hi Maria. Take a photo of your W-2 and text it here. No app needed.
-            </div>
-
-            <div className="lp-proof-message lp-proof-message-photo">
-              <span className="lp-proof-message-sender">Maria</span>
-              <div className="lp-proof-photo-card">
-                <span className="lp-proof-photo-thumb" aria-hidden="true" />
-                <span className="lp-proof-photo-name">IMG_2931.jpg</span>
+                {message.attachments?.length ? (
+                  <div className="lp-hero-thread-attachments">
+                    {message.attachments.map((attachment) => (
+                      <span key={attachment} className="lp-hero-thread-attachment">
+                        {attachment}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
-          </div>
+          ))}
+        </div>
+
+        <div className="lp-hero-phone-composer" aria-hidden="true">
+          <div className="lp-hero-phone-composer-input">iMessage</div>
+          <div className="lp-hero-phone-composer-send">Send</div>
         </div>
       </div>
-
-      <div className="lp-proof-moment lp-proof-moment-files">
-        <div className="lp-proof-file-row lp-proof-file-row-primary">
-          <DriveIcon />
-          <div className="lp-proof-file-copy">
-            <strong>Maria-Chen_W2_2025.pdf</strong>
-            <span>
-              <CheckCircle2 size={14} />
-              Saved to Drive
-            </span>
-          </div>
-          <span className="lp-proof-file-time">just now</span>
-        </div>
-
-        <div className="lp-proof-file-row lp-proof-file-row-secondary">
-          <DriveIcon />
-          <div className="lp-proof-file-copy">
-            <strong>Maria-Chen_1099-INT_2025.pdf</strong>
-            <span>
-              <CheckCircle2 size={14} />
-              Saved to Drive
-            </span>
-          </div>
-          <span className="lp-proof-file-time">just now</span>
-        </div>
-      </div>
-
-      <p className="lp-proof-card-copy">Jordan sent one text. TaxPing handled the rest.</p>
     </div>
   );
 }
@@ -357,7 +354,7 @@ export default function LandingPage() {
           </div>
 
           <div className="lp-hero-stage lp-load-in lp-load-delay-3">
-            <TwoSecondProofCard />
+            <HeroWorkflowStage />
           </div>
         </section>
 
