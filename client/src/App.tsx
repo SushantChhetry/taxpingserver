@@ -14,6 +14,10 @@ import LandingTryText from './pages/LandingTryText';
 import DashboardThemeProvider from './components/DashboardThemeProvider';
 
 const PILOT_PREPARER_ID = 'feb93713-91a6-474f-8d56-cebdd606ebff';
+const LANDING_ONLY = import.meta.env.VITE_LANDING_ONLY === 'true';
+const LANDING_TITLE = 'TaxPing | Text-first Tax Prep Intake';
+const LANDING_DESCRIPTION =
+  'See how TaxPing turns tax document collection into a smoother client flow with branded entry points, texting, reminders, and dashboard visibility.';
 
 function LoadingRoute({ label }: { label: string }) {
   return (
@@ -74,8 +78,10 @@ const Dashboard = lazy(async () => {
   }
 });
 
-const DEFAULT_TITLE = 'TaxPing Dashboard';
-const DEFAULT_DESCRIPTION = 'TaxPing helps tax preparers track client document collection, follow-ups, and seasonal workflow in one dashboard.';
+const DEFAULT_TITLE = LANDING_ONLY ? LANDING_TITLE : 'TaxPing Dashboard';
+const DEFAULT_DESCRIPTION = LANDING_ONLY
+  ? LANDING_DESCRIPTION
+  : 'TaxPing helps tax preparers track client document collection, follow-ups, and seasonal workflow in one dashboard.';
 
 function updateMetaDescription(content: string) {
   let element = document.querySelector('meta[name="description"]');
@@ -130,9 +136,12 @@ function AppMetadata() {
     } else if (/^\/landing\/try-text\/?$/.test(path)) {
       title = 'Text TaxPing | TaxPing';
       description = 'Open a prefilled text message to TaxPing from your phone.';
+    } else if (LANDING_ONLY && /^\/$/.test(path)) {
+      title = LANDING_TITLE;
+      description = LANDING_DESCRIPTION;
     } else if (/^\/landing\/?$/.test(path)) {
-      title = 'TaxPing | Text-first Tax Prep Intake';
-      description = 'See how TaxPing turns tax document collection into a smoother client flow with branded entry points, texting, reminders, and dashboard visibility.';
+      title = LANDING_TITLE;
+      description = LANDING_DESCRIPTION;
     }
 
     document.title = title;
@@ -148,26 +157,37 @@ export default function App() {
       <DashboardThemeProvider>
         <AppMetadata />
         <Routes>
-          <Route path="/" element={<Navigate to={`/dashboard/${PILOT_PREPARER_ID}/overview`} replace />} />
-          <Route path="/landing" element={<LandingPage />} />
-          <Route path="/landing/try-text" element={<LandingTryText />} />
-          <Route path="/dashboard/:preparerId/overview" element={<Overview />} />
           <Route
-            path="/dashboard/:preparerId"
+            path="/"
             element={
-              <Suspense fallback={<LoadingRoute label="Loading dashboard…" />}>
-                <Dashboard />
-              </Suspense>
+              LANDING_ONLY ? <LandingPage /> : <Navigate to={`/dashboard/${PILOT_PREPARER_ID}/overview`} replace />
             }
           />
-          <Route path="/dashboard/:preparerId/client/:clientId" element={<ClientProfile />} />
-          <Route path="/dashboard/:preparerId/settings" element={<Settings />} />
-          <Route path="/dashboard/:preparerId/help" element={<Help />} />
-          <Route path="/dashboard/:preparerId/messages" element={<Messages />} />
-          <Route path="/dashboard/:preparerId/season" element={<Season />} />
-          <Route path="/public/:preparerId/qr" element={<PublicQr />} />
-          <Route path="/public/:preparerId/signup" element={<PublicSignup />} />
-          <Route path="/public/:preparerId/connect" element={<PublicLaunch />} />
+          <Route path="/landing" element={<LandingPage />} />
+          <Route path="/landing/try-text" element={<LandingTryText />} />
+          {LANDING_ONLY ? (
+            <Route path="*" element={<Navigate to="/" replace />} />
+          ) : (
+            <>
+              <Route path="/dashboard/:preparerId/overview" element={<Overview />} />
+              <Route
+                path="/dashboard/:preparerId"
+                element={
+                  <Suspense fallback={<LoadingRoute label="Loading dashboard…" />}>
+                    <Dashboard />
+                  </Suspense>
+                }
+              />
+              <Route path="/dashboard/:preparerId/client/:clientId" element={<ClientProfile />} />
+              <Route path="/dashboard/:preparerId/settings" element={<Settings />} />
+              <Route path="/dashboard/:preparerId/help" element={<Help />} />
+              <Route path="/dashboard/:preparerId/messages" element={<Messages />} />
+              <Route path="/dashboard/:preparerId/season" element={<Season />} />
+              <Route path="/public/:preparerId/qr" element={<PublicQr />} />
+              <Route path="/public/:preparerId/signup" element={<PublicSignup />} />
+              <Route path="/public/:preparerId/connect" element={<PublicLaunch />} />
+            </>
+          )}
         </Routes>
       </DashboardThemeProvider>
     </BrowserRouter>

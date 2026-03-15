@@ -3,12 +3,13 @@ import { ArrowRight, MessageSquareText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import logo from '../../../src/assets/logo.png';
 import {
+  LANDING_TRY_SMS_BODY,
   LANDING_TRY_SMS_PHONE,
   buildSmsHref,
 } from '../utils/publicIntake';
 
 export default function LandingTryText() {
-  const smsHref = buildSmsHref(LANDING_TRY_SMS_PHONE, '');
+  const smsHref = buildSmsHref(LANDING_TRY_SMS_PHONE, LANDING_TRY_SMS_BODY);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -69,7 +70,7 @@ export default function LandingTryText() {
         </div>
 
         <div style={{ marginTop: 14, fontSize: 15, lineHeight: 1.7, color: '#475569' }}>
-          We are opening a new text to TaxPing. If nothing happens, use the button below.
+          We are opening a new text to {LANDING_TRY_SMS_PHONE} with "{LANDING_TRY_SMS_BODY}". If nothing happens, use the button below.
         </div>
 
         <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>

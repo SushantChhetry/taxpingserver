@@ -3,6 +3,7 @@ import { DEFAULT_BRAND_COLOR, normalizeHexColor } from './brandThemes';
 
 const DEFAULT_OPENING_TEXT = "Hi, I'm ready to send my tax documents.";
 export const LANDING_TRY_SMS_PHONE = '+12562253874';
+export const LANDING_TRY_SMS_BODY = 'Hey TaxPing, I am ready to file my taxes';
 
 export const DEMO_PREPARER_ID = 'demo';
 

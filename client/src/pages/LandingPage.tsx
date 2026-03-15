@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom';
 import LandingJourneySection from '../components/LandingJourneySection';
 import TaxPingLogo from '../components/TaxPingLogo';
 import {
+  LANDING_TRY_SMS_BODY,
   LANDING_TRY_SMS_PHONE,
   buildSmsHref,
   buildQrImageUrl,
@@ -23,6 +24,21 @@ type Testimonial = {
   name: string;
   quote: string;
   avatarUrl: string;
+};
+
+type HeroToast = {
+  emoji: string;
+  text: string;
+  tone?: 'default' | 'celebrate';
+};
+
+type HeroFlowStep = {
+  side: 'brand' | 'client';
+  text: string;
+  attachments?: string[];
+  delayMs: number;
+  toast?: HeroToast;
+  toastDurationMs?: number;
 };
 
 type CalendlyWindow = Window & typeof globalThis & {
@@ -104,78 +120,316 @@ const CONTACT_CTA_URL = 'https://calendly.com/sushantchhetry-iwvx/30min?hide_eve
 const CONTACT_CTA_EMAIL = 'pilot@taxping.ai';
 const CALENDLY_SCRIPT_SRC = 'https://assets.calendly.com/assets/external/widget.js';
 const CALENDLY_STYLE_HREF = 'https://assets.calendly.com/assets/external/widget.css';
+const HERO_FLOW_RESTART_MS = 5600;
+
+const getHeroStepDelay = (text: string, extraMs = 0) =>
+  900 + Math.min(text.length * 20, 1600) + extraMs;
+
+const HERO_FLOW_STEPS: HeroFlowStep[] = [
+  {
+    side: 'client',
+    text: LANDING_TRY_SMS_BODY,
+    delayMs: getHeroStepDelay(LANDING_TRY_SMS_BODY, 260),
+    toast: { emoji: '💬', text: 'Intake starts by text' },
+  },
+  {
+    side: 'brand',
+    text: "You're in. Send your W-2, 1099s, photo ID, and 2024 return here.",
+    delayMs: getHeroStepDelay("You're in. Send your W-2, 1099s, photo ID, and 2024 return here.", 360),
+    toast: { emoji: '📋', text: 'Checklist sent' },
+  },
+  {
+    side: 'client',
+    text: 'Sending the first ones now.',
+    attachments: ['W-2.jpg', 'Driver-License.jpg'],
+    delayMs: getHeroStepDelay('Sending the first ones now.', 520),
+    toast: { emoji: '📎', text: 'W-2 and ID in' },
+  },
+  {
+    side: 'brand',
+    text: 'Got your W-2 and ID. I still need your 1099-INT and 2024 return.',
+    delayMs: getHeroStepDelay('Got your W-2 and ID. I still need your 1099-INT and 2024 return.', 360),
+    toast: { emoji: '🔎', text: 'Files identified' },
+  },
+  {
+    side: 'client',
+    text: 'Adding the 1099 now.',
+    attachments: ['1099-INT.pdf'],
+    delayMs: getHeroStepDelay('Adding the 1099 now.', 480),
+    toast: { emoji: '📨', text: 'More docs arrive' },
+  },
+  {
+    side: 'brand',
+    text: '1099-INT confirmed. Did you move states this year or add dependents?',
+    delayMs: getHeroStepDelay('1099-INT confirmed. Did you move states this year or add dependents?', 300),
+    toast: { emoji: '✅', text: 'Missing list updates' },
+  },
+  {
+    side: 'client',
+    text: 'Yes. Georgia to Alabama in June, and we had a baby in March.',
+    delayMs: getHeroStepDelay('Yes. Georgia to Alabama in June, and we had a baby in March.', 220),
+    toast: { emoji: '📝', text: 'Life changes captured' },
+  },
+  {
+    side: 'client',
+    text: 'Quick question: since I moved states, do I need to file in both Georgia and Alabama?',
+    delayMs: 2300,
+    toast: { emoji: '🙋', text: 'Questions stay in thread' },
+  },
+  {
+    side: 'brand',
+    text: "Yes, most likely both. Your preparer will review the move dates, but you're on the right track.",
+    delayMs: 1450,
+    toast: { emoji: '🧠', text: 'Answers go out fast' },
+  },
+  {
+    side: 'client',
+    text: 'This is so much easier than a portal. Thanks.',
+    delayMs: 1700,
+    toast: {
+      emoji: '🎉',
+      text: 'Clients feel cared for',
+      tone: 'celebrate',
+    },
+  },
+  {
+    side: 'brand',
+    text: 'Glad to help. Do you also have a 1095-A or any self-employment income?',
+    delayMs: getHeroStepDelay('Glad to help. Do you also have a 1095-A or any self-employment income?', 900),
+    toast: { emoji: '❓', text: 'Next follow-up sent' },
+  },
+  {
+    side: 'client',
+    text: 'I do have a 1095-A.',
+    delayMs: getHeroStepDelay('I do have a 1095-A.', 380),
+    toast: { emoji: '📄', text: 'Another form surfaced' },
+  },
+  {
+    side: 'brand',
+    text: "Perfect. I'm still waiting on your 2024 return and 1095-A to keep the file moving.",
+    delayMs: getHeroStepDelay("Perfect. I'm still waiting on your 2024 return and 1095-A to keep the file moving.", 360),
+    toast: { emoji: '📌', text: 'Only missing items open' },
+  },
+  {
+    side: 'client',
+    text: "Perfect. I'll send both tonight.",
+    delayMs: getHeroStepDelay("Perfect. I'll send both tonight.", 220),
+    toast: { emoji: '🤝', text: 'Next step is clear' },
+  },
+  {
+    side: 'brand',
+    text: 'Reminder: send your 2024 return and 1095-A here when you have them.',
+    delayMs: getHeroStepDelay('Reminder: send your 2024 return and 1095-A here when you have them.', 900),
+    toast: { emoji: '⏰', text: 'Reminder sends itself' },
+  },
+  {
+    side: 'client',
+    text: 'Just sent both over.',
+    attachments: ['2024-Return.pdf', '1095-A.pdf'],
+    delayMs: getHeroStepDelay('Just sent both over.', 1080),
+    toast: { emoji: '📥', text: 'Final docs arrive' },
+  },
+  {
+    side: 'brand',
+    text: 'Got them. Your 2024 return and 1095-A are both confirmed.',
+    delayMs: getHeroStepDelay('Got them. Your 2024 return and 1095-A are both confirmed.', 520),
+    toast: { emoji: '✅', text: 'All files confirmed' },
+  },
+  {
+    side: 'brand',
+    text: "You're all set. Your file is ready for prep, and we'll text if anything else comes up.",
+    delayMs: getHeroStepDelay("You're all set. Your file is ready for prep, and we'll text if anything else comes up.", 760),
+    toast: {
+      emoji: '🎯',
+      text: 'Ready for prep',
+      tone: 'celebrate',
+    },
+  },
+];
 
 function HeroWorkflowStage() {
-  const threadMessages = [
-    {
-      side: 'brand' as const,
-      text: "Hi Maria. Send your W-2, 1099-INT, and 2024 return here.",
-    },
-    {
-      side: 'client' as const,
-      text: 'Uploading the first two now.',
-      attachments: ['W-2.jpg', '1099-INT.pdf'],
-    },
-    {
-      side: 'brand' as const,
-      text: 'Got them. I still need your 2024 return.',
-    },
-  ];
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [activeToastIndex, setActiveToastIndex] = useState<number | null>(null);
+  const threadRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    let cancelled = false;
+    let stepTimers: number[] = [];
+    let restartTimer = 0;
+
+    const runSequence = () => {
+      setVisibleCount(0);
+      setActiveToastIndex(null);
+      threadRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+      stepTimers = [];
+
+      let elapsed = 0;
+
+      HERO_FLOW_STEPS.forEach((step, index) => {
+        elapsed += step.delayMs;
+
+        stepTimers.push(window.setTimeout(() => {
+          if (cancelled) {
+            return;
+          }
+
+          setVisibleCount(index + 1);
+
+          if (!step.toast) {
+            return;
+          }
+
+          setActiveToastIndex(index);
+
+          if (step.toastDurationMs) {
+            stepTimers.push(window.setTimeout(() => {
+              if (cancelled) {
+                return;
+              }
+
+              setActiveToastIndex((current) => (current === index ? null : current));
+            }, step.toastDurationMs));
+          }
+        }, elapsed));
+      });
+
+      restartTimer = window.setTimeout(() => {
+        if (!cancelled) {
+          runSequence();
+        }
+      }, elapsed + HERO_FLOW_RESTART_MS);
+    };
+
+    runSequence();
+
+    return () => {
+      cancelled = true;
+      stepTimers.forEach((timer) => window.clearTimeout(timer));
+      window.clearTimeout(restartTimer);
+    };
+  }, []);
+
+  const activeToast = activeToastIndex === null
+    ? null
+    : HERO_FLOW_STEPS[activeToastIndex]?.toast ?? null;
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !threadRef.current || visibleCount === 0) {
+      return undefined;
+    }
+
+    const threadNode = threadRef.current;
+    const scrollBehavior = visibleCount <= 1 ? 'auto' : 'smooth';
+    const timeout = window.setTimeout(() => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          threadNode.scrollTo({
+            top: threadNode.scrollHeight,
+            behavior: scrollBehavior,
+          });
+        });
+      });
+    }, 140);
+
+    return () => window.clearTimeout(timeout);
+  }, [visibleCount]);
 
   return (
-    <div className="lp-hero-phone-frame" aria-label="iPhone mockup showing the TaxPing text exchange">
-      <div className="lp-hero-phone-notch" aria-hidden="true" />
-
-      <div className="lp-hero-phone-screen">
-        <div className="lp-hero-phone-status" aria-hidden="true">
-          <span>9:41</span>
-          <span>5G</span>
-        </div>
-
-        <div className="lp-hero-phone-topbar">
-          <div className="lp-hero-phone-contact">
-            <span className="lp-hero-phone-contact-avatar">T</span>
-            <div>
-              <strong>TaxPing</strong>
-              <span>iMessage</span>
+    <div className="lp-hero-phone-shell">
+      <div className="lp-hero-toast-layer" aria-hidden="true">
+        {activeToast ? (
+          <div
+            key={`${activeToastIndex}-${activeToast.text}`}
+            className={[
+              'lp-hero-toast',
+              activeToast.tone === 'celebrate' ? 'lp-hero-toast-celebrate' : '',
+            ].join(' ').trim()}
+          >
+            <span
+              className={[
+                'lp-hero-toast-emoji',
+                activeToast.tone === 'celebrate' ? 'lp-hero-toast-emoji-celebrate' : '',
+              ].join(' ').trim()}
+              aria-hidden="true"
+            >
+              {activeToast.emoji}
+            </span>
+            <div className="lp-hero-toast-copy">
+              <strong className="lp-hero-toast-text">{activeToast.text}</strong>
             </div>
           </div>
-        </div>
+        ) : null}
+      </div>
 
-        <div className="lp-hero-thread" aria-label="TaxPing text exchange">
-          {threadMessages.map((message, index) => (
-            <div
-              key={`${message.side}-${index}-${message.text}`}
-              className={`lp-hero-thread-row ${message.side === 'client' ? 'lp-hero-thread-row-client' : ''}`}
-              style={{ animationDelay: `${140 + index * 120}ms` }}
-            >
-              <div
-                className={[
-                  'lp-hero-thread-bubble',
-                  message.side === 'client'
-                    ? 'lp-hero-thread-bubble-client'
-                    : 'lp-hero-thread-bubble-brand',
-                ].join(' ').trim()}
-              >
-                <span>{message.text}</span>
+      <div className="lp-hero-phone-frame" aria-label="iPhone mockup showing the TaxPing text exchange">
+        <div className="lp-hero-phone-notch" aria-hidden="true" />
 
-                {message.attachments?.length ? (
-                  <div className="lp-hero-thread-attachments">
-                    {message.attachments.map((attachment) => (
-                      <span key={attachment} className="lp-hero-thread-attachment">
-                        {attachment}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
+        <div className="lp-hero-phone-screen">
+          <div className="lp-hero-phone-status" aria-hidden="true">
+            <span>9:41</span>
+            <span>5G</span>
+          </div>
+
+          <div className="lp-hero-phone-topbar">
+            <div className="lp-hero-phone-contact">
+              <span className="lp-hero-phone-contact-avatar">T</span>
+              <div>
+                <strong>TaxPing</strong>
+                <span>iMessage</span>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
 
-        <div className="lp-hero-phone-composer" aria-hidden="true">
-          <div className="lp-hero-phone-composer-input">iMessage</div>
-          <div className="lp-hero-phone-composer-send">Send</div>
+          <div ref={threadRef} className="lp-hero-thread" aria-label="TaxPing text exchange">
+            {HERO_FLOW_STEPS.slice(0, visibleCount).map((message, index, visibleSteps) => {
+              const previousMessage = visibleSteps[index - 1];
+              const nextMessage = visibleSteps[index + 1];
+              const startsGroup = !previousMessage || previousMessage.side !== message.side;
+              const endsGroup = !nextMessage || nextMessage.side !== message.side;
+
+              return (
+                <div
+                  key={`${message.side}-${index}-${message.text}-${message.delayMs}`}
+                  className={[
+                    'lp-hero-thread-row',
+                    message.side === 'client' ? 'lp-hero-thread-row-client' : 'lp-hero-thread-row-brand',
+                    startsGroup ? 'lp-hero-thread-row-group-start' : 'lp-hero-thread-row-group-continue',
+                    endsGroup ? 'lp-hero-thread-row-group-end' : '',
+                  ].join(' ').trim()}
+                >
+                <div
+                  className={[
+                    'lp-hero-thread-bubble',
+                    message.side === 'client'
+                      ? 'lp-hero-thread-bubble-client'
+                      : 'lp-hero-thread-bubble-brand',
+                  ].join(' ').trim()}
+                >
+                  <span>{message.text}</span>
+
+                  {message.attachments?.length ? (
+                    <div className="lp-hero-thread-attachments">
+                      {message.attachments.map((attachment) => (
+                        <span key={attachment} className="lp-hero-thread-attachment">
+                          {attachment}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              );
+            })}
+          </div>
+
+          <div className="lp-hero-phone-composer" aria-hidden="true">
+            <div className="lp-hero-phone-composer-input">iMessage</div>
+            <div className="lp-hero-phone-composer-send">Send</div>
+          </div>
         </div>
       </div>
     </div>
@@ -188,7 +442,7 @@ export default function LandingPage() {
   const calendlyRef = useRef<HTMLDivElement | null>(null);
   const ctaSectionRef = useRef<HTMLElement | null>(null);
   const landingTryTextPath = '/landing/try-text';
-  const landingTryQrUrl = buildQrImageUrl(buildSmsHref(LANDING_TRY_SMS_PHONE, ''), 480);
+  const landingTryQrUrl = buildQrImageUrl(buildSmsHref(LANDING_TRY_SMS_PHONE, LANDING_TRY_SMS_BODY), 480);
 
   useEffect(() => {
     const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-lp-reveal]'));
@@ -327,7 +581,7 @@ export default function LandingPage() {
           <div className="lp-hero-copy lp-load-in lp-load-delay-2">
             <div className="lp-eyebrow">
               <Sparkles size={14} />
-              Collect tax files by text
+              Stop chasing clients for tax documents.
             </div>
 
             <h1>
@@ -348,9 +602,8 @@ export default function LandingPage() {
             </h1>
 
             <p className="lp-hero-lead">
-              Clients text like they normally do. TaxPing asks for what is missing, follows up for you, and keeps each file moving.
+              TaxPing texts clients automatically until the file is complete.
             </p>
-
           </div>
 
           <div className="lp-hero-stage lp-load-in lp-load-delay-3">
@@ -395,7 +648,7 @@ export default function LandingPage() {
 
         <LandingJourneySection />
 
-        <section className="lp-section">
+        <section className="lp-section lp-try-section">
           <div className="lp-try-panel lp-reveal" data-lp-reveal>
             <div className="lp-try-copy">
               <div className="lp-eyebrow">Try it yourself</div>
