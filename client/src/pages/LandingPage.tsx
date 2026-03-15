@@ -117,7 +117,7 @@ const TESTIMONIALS: Testimonial[] = [
 ];
 
 const CONTACT_CTA_URL = 'https://calendly.com/sushantchhetry-iwvx/30min?hide_event_type_details=1&hide_gdpr_banner=1&primary_color=4b84d5';
-const CONTACT_CTA_EMAIL = 'pilot@taxping.ai';
+const CONTACT_CTA_EMAIL = 'sushantchhetry@gmail.com';
 const CALENDLY_SCRIPT_SRC = 'https://assets.calendly.com/assets/external/widget.js';
 const CALENDLY_STYLE_HREF = 'https://assets.calendly.com/assets/external/widget.css';
 const HERO_FLOW_RESTART_MS = 5600;
@@ -789,12 +789,6 @@ export default function LandingPage() {
               <span>Product</span>
               <a href="#product">How it works</a>
               <a href="#journey">See the steps</a>
-            </div>
-
-            <div className="lp-footer-column">
-              <span>Demo</span>
-              <Link to="/public/demo/signup">Open demo</Link>
-              <Link to="/public/demo/connect">Text demo</Link>
             </div>
 
             <div className="lp-footer-column">

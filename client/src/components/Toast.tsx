@@ -1,67 +1,75 @@
-import { useEffect, useState, useCallback } from 'react';
-import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
+import * as ToastPrimitive from '@radix-ui/react-toast';
+import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { clearToastEnqueue, setToastEnqueue, type ToastMessage } from './toast-store';
 
-export type ToastVariant = 'success' | 'error';
-export interface ToastMessage { id: string; message: string; variant: ToastVariant; }
-
-// module-level setter so toast() can be called imperatively
-let _setter: React.Dispatch<React.SetStateAction<ToastMessage[]>> | null = null;
-
-export function toast(message: string, variant: ToastVariant = 'success') {
-  const id = Math.random().toString(36).slice(2);
-  _setter?.((prev) => [...prev, { id, message, variant }]);
-}
-
-function ToastItem({ t, onDismiss }: { t: ToastMessage; onDismiss: (id: string) => void }) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const show = requestAnimationFrame(() => setVisible(true));
-    const hide = setTimeout(() => {
-      setVisible(false);
-      setTimeout(() => onDismiss(t.id), 300);
-    }, 3000);
-    return () => { cancelAnimationFrame(show); clearTimeout(hide); };
-  }, [t.id, onDismiss]);
+function ToastItem({
+  toastMessage,
+  onDismiss,
+}: {
+  toastMessage: ToastMessage;
+  onDismiss: (id: string) => void;
+}) {
+  const success = toastMessage.variant === 'success';
 
   return (
-    <div
-      style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        background: '#1A1A1A', color: 'white', fontSize: 13,
-        borderRadius: 8, padding: '12px 16px', minWidth: 240,
-        boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-        transition: 'opacity 300ms, transform 300ms',
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(10px)',
-      }}
+    <ToastPrimitive.Root
+      duration={3000}
+      onOpenChange={(open) => !open && onDismiss(toastMessage.id)}
+      className={cn(
+        'pointer-events-auto flex min-w-60 items-center gap-2.5 rounded-lg px-4 py-3 text-[13px] text-white shadow-[0_8px_24px_rgba(0,0,0,0.15)] transition-all',
+        'data-[state=open]:translate-y-0 data-[state=open]:opacity-100',
+        'data-[state=closed]:translate-y-2 data-[state=closed]:opacity-0',
+        success ? 'bg-[#1A1A1A]' : 'bg-[#1A1A1A]'
+      )}
     >
-      {t.variant === 'success'
-        ? <CheckCircle2 size={16} color="#22C55E" style={{ flexShrink: 0 }} />
-        : <AlertTriangle size={16} color="#EF4444" style={{ flexShrink: 0 }} />
-      }
-      <span style={{ flex: 1 }}>{t.message}</span>
-      <button
-        onClick={() => onDismiss(t.id)}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', display: 'flex', padding: 0 }}
-      >
-        <X size={13} />
-      </button>
-    </div>
+      {success ? (
+        <CheckCircle2 size={16} className="shrink-0 text-[#22C55E]" />
+      ) : (
+        <AlertTriangle size={16} className="shrink-0 text-[#EF4444]" />
+      )}
+
+      <ToastPrimitive.Description className="flex-1">
+        {toastMessage.message}
+      </ToastPrimitive.Description>
+
+      <ToastPrimitive.Close asChild>
+        <button
+          type="button"
+          className="inline-flex items-center justify-center rounded-sm border-0 bg-transparent p-0 text-[#6B7280] transition-colors hover:text-white"
+          aria-label="Dismiss notification"
+        >
+          <X size={13} />
+        </button>
+      </ToastPrimitive.Close>
+    </ToastPrimitive.Root>
   );
 }
 
 export function ToastContainer() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  _setter = setToasts;
+
+  useEffect(() => {
+    setToastEnqueue((toastMessage) => {
+      setToasts((current) => [...current, toastMessage]);
+    });
+
+    return () => {
+      clearToastEnqueue();
+    };
+  }, []);
 
   const dismiss = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    setToasts((current) => current.filter((toastMessage) => toastMessage.id !== id));
   }, []);
 
   return (
-    <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-      {toasts.map((t) => <ToastItem key={t.id} t={t} onDismiss={dismiss} />)}
-    </div>
+    <ToastPrimitive.Provider swipeDirection="right">
+      {toasts.map((toastMessage) => (
+        <ToastItem key={toastMessage.id} toastMessage={toastMessage} onDismiss={dismiss} />
+      ))}
+      <ToastPrimitive.Viewport className="fixed bottom-5 right-5 z-[9999] flex w-fit max-w-[calc(100vw-40px)] flex-col items-end gap-2 outline-none" />
+    </ToastPrimitive.Provider>
   );
 }

@@ -17,7 +17,8 @@ import Sidebar from '../components/Sidebar';
 import StatusBadge from '../components/StatusBadge';
 import AddClientModal from '../components/AddClientModal';
 import SkeletonRow from '../components/SkeletonRow';
-import { ToastContainer, toast } from '../components/Toast';
+import { ToastContainer } from '../components/Toast';
+import { toast } from '../components/toast-store';
 import { getBrandThemeStyle, resolveBrandTheme } from '../utils/brandThemes';
 
 const TABLE_COLUMNS =

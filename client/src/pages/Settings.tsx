@@ -22,7 +22,8 @@ import logo from '../../../src/assets/logo.png';
 import { getPreparerSettings, updatePreparerSettings } from '../api';
 import type { PreparerSettingsData } from '../types';
 import Sidebar from '../components/Sidebar';
-import { ToastContainer, toast } from '../components/Toast';
+import { ToastContainer } from '../components/Toast';
+import { toast } from '../components/toast-store';
 import { persistDashboardTheme } from '../components/DashboardThemeProvider';
 import {
   BRAND_THEMES,

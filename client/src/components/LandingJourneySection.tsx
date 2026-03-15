@@ -94,78 +94,90 @@ const JOURNEY_FOCUS_LINE_MIN = 140;
 const JOURNEY_FOCUS_LINE_MAX = 320;
 const JOURNEY_FINAL_STEP_BUFFER = 120;
 const JOURNEY_MOBILE_BREAKPOINT = 900;
+const JOURNEY_CAROUSEL_BREAKPOINT = 640;
 
 const getJourneyFocusLine = (viewportHeight: number) =>
   Math.min(JOURNEY_FOCUS_LINE_MAX, Math.max(JOURNEY_FOCUS_LINE_MIN, viewportHeight * JOURNEY_FOCUS_LINE_RATIO));
 
-function JourneyPreviewBody({ step }: { step: JourneyStep }) {
+function JourneyPreviewCopy({ step }: { step: JourneyStep }) {
   return (
-    <>
-      <div className="lp-journey-preview-copy">
-        <span className="lp-stage-kicker">
-          Step {step.label} · {step.kicker}
-        </span>
-        <strong>{step.title}</strong>
-        <span className="lp-journey-preview-note-label">Why it matters</span>
-        <p>{step.detail}</p>
+    <div className="lp-journey-preview-copy">
+      <span className="lp-stage-kicker">
+        Step {step.label} · {step.kicker}
+      </span>
+      <strong>{step.title}</strong>
+      <span className="lp-journey-preview-note-label">Why it matters</span>
+      <p>{step.detail}</p>
+    </div>
+  );
+}
+
+function JourneyPhonePanel({ step }: { step: JourneyStep }) {
+  return (
+    <div className="lp-journey-phone-panel">
+      <div className="lp-journey-phone-header">
+        <span className="lp-journey-phone-stage">Client view</span>
+        <strong>{step.kicker}</strong>
       </div>
 
-      <div className="lp-journey-phone-panel">
-        <div className="lp-journey-phone-header">
-          <span className="lp-journey-phone-stage">Client view</span>
-          <strong>{step.kicker}</strong>
-        </div>
+      <div className="lp-journey-phone-frame" aria-label="iPhone text thread showing the TaxPing intake flow">
+        <div className="lp-journey-phone-notch" aria-hidden="true" />
 
-        <div className="lp-journey-phone-frame" aria-label="iPhone text thread showing the TaxPing intake flow">
-          <div className="lp-journey-phone-notch" aria-hidden="true" />
+        <div className="lp-journey-phone-screen">
+          <div className="lp-journey-phone-status" aria-hidden="true">
+            <span>9:41</span>
+            <span>5G</span>
+          </div>
 
-          <div className="lp-journey-phone-screen">
-            <div className="lp-journey-phone-status" aria-hidden="true">
-              <span>9:41</span>
-              <span>5G</span>
+          <div className="lp-journey-phone-topbar">
+            <div className="lp-journey-phone-avatar">T</div>
+            <div>
+              <div className="lp-journey-phone-name">TaxPing</div>
+              <div className="lp-journey-phone-label">iMessage</div>
             </div>
+          </div>
 
-            <div className="lp-journey-phone-topbar">
-              <div className="lp-journey-phone-avatar">T</div>
-              <div>
-                <div className="lp-journey-phone-name">TaxPing</div>
-                <div className="lp-journey-phone-label">iMessage</div>
-              </div>
-            </div>
-
-            <div key={step.label} className="lp-journey-thread">
-              {step.messages.map((message, index) => (
+          <div key={step.label} className="lp-journey-thread">
+            {step.messages.map((message, index) => (
+              <div
+                key={`${message.side}-${index}-${message.text}`}
+                className={`lp-journey-thread-row ${message.side === 'client' ? 'lp-journey-thread-row-client' : ''}`}
+                style={{ animationDelay: `${120 + index * 90}ms` }}
+              >
                 <div
-                  key={`${message.side}-${index}-${message.text}`}
-                  className={`lp-journey-thread-row ${message.side === 'client' ? 'lp-journey-thread-row-client' : ''}`}
-                  style={{ animationDelay: `${120 + index * 90}ms` }}
+                  className={`lp-journey-thread-bubble ${message.side === 'client' ? 'lp-journey-thread-bubble-client' : 'lp-journey-thread-bubble-brand'}`}
                 >
-                  <div
-                    className={`lp-journey-thread-bubble ${message.side === 'client' ? 'lp-journey-thread-bubble-client' : 'lp-journey-thread-bubble-brand'}`}
-                  >
-                    <span>{message.text}</span>
+                  <span>{message.text}</span>
 
-                    {message.attachments?.length ? (
-                      <div className="lp-journey-attachments">
-                        {message.attachments.map((attachment) => (
-                          <div key={attachment} className="lp-journey-attachment-chip">
-                            {attachment}
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
+                  {message.attachments?.length ? (
+                    <div className="lp-journey-attachments">
+                      {message.attachments.map((attachment) => (
+                        <div key={attachment} className="lp-journey-attachment-chip">
+                          {attachment}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
+          </div>
 
-            <div className="lp-journey-composer" aria-hidden="true">
-              <div className="lp-journey-composer-input">iMessage</div>
-              <div className="lp-journey-composer-send">Send</div>
-            </div>
+          <div className="lp-journey-composer" aria-hidden="true">
+            <div className="lp-journey-composer-input">iMessage</div>
+            <div className="lp-journey-composer-send">Send</div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function JourneyPreviewBody({ step }: { step: JourneyStep }) {
+  return (
+    <>
+      <JourneyPreviewCopy step={step} />
+      <JourneyPhonePanel step={step} />
     </>
   );
 }
@@ -174,8 +186,8 @@ export default function LandingJourneySection() {
   const [activeStep, setActiveStep] = useState(0);
   const sectionRef = useRef<HTMLElement | null>(null);
   const stepRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const summaryRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const mobilePreviewRef = useRef<HTMLElement | null>(null);
+  const mobileCarouselRef = useRef<HTMLDivElement | null>(null);
+  const mobileSlideRefs = useRef<Array<HTMLDivElement | null>>([]);
   const currentStep = JOURNEY_STEPS[activeStep];
 
   useEffect(() => {
@@ -239,15 +251,87 @@ export default function LandingJourneySection() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || window.innerWidth > 640) {
-      return;
+    if (typeof window === 'undefined' || window.innerWidth > JOURNEY_CAROUSEL_BREAKPOINT) {
+      return undefined;
     }
 
-    summaryRefs.current[activeStep]?.scrollIntoView({
-      block: 'nearest',
-      inline: 'center',
+    const track = mobileCarouselRef.current;
+    const slide = mobileSlideRefs.current[activeStep];
+
+    if (!track || !slide) {
+      return undefined;
+    }
+
+    const targetLeft = slide.offsetLeft;
+    if (Math.abs(track.scrollLeft - targetLeft) < 6) {
+      return undefined;
+    }
+
+    track.scrollTo({
+      left: targetLeft,
+      behavior: 'smooth',
     });
+
+    return undefined;
   }, [activeStep]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.innerWidth > JOURNEY_CAROUSEL_BREAKPOINT) {
+      return undefined;
+    }
+
+    const track = mobileCarouselRef.current;
+
+    if (!track) {
+      return undefined;
+    }
+
+    let settleTimer = 0;
+
+    const updateActiveFromCarousel = () => {
+      const viewportCenter = track.scrollLeft + track.clientWidth / 2;
+      let nearestIndex = 0;
+      let nearestDistance = Number.POSITIVE_INFINITY;
+
+      mobileSlideRefs.current.forEach((slide, index) => {
+        if (!slide) {
+          return;
+        }
+
+        const slideCenter = slide.offsetLeft + slide.offsetWidth / 2;
+        const distance = Math.abs(slideCenter - viewportCenter);
+
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestIndex = index;
+        }
+      });
+
+      setActiveStep((current) => (current === nearestIndex ? current : nearestIndex));
+    };
+
+    const handleScroll = () => {
+      if (settleTimer) {
+        window.clearTimeout(settleTimer);
+      }
+
+      settleTimer = window.setTimeout(() => {
+        settleTimer = 0;
+        updateActiveFromCarousel();
+      }, 80);
+    };
+
+    updateActiveFromCarousel();
+    track.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      if (settleTimer) {
+        window.clearTimeout(settleTimer);
+      }
+
+      track.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   const scrollToJourneyStep = (stepIndex: number, source: 'summary' | 'step') => {
     const target = stepRefs.current[stepIndex];
@@ -262,13 +346,6 @@ export default function LandingJourneySection() {
         target.scrollIntoView({
           block: 'start',
           behavior: 'smooth',
-        });
-      } else {
-        window.requestAnimationFrame(() => {
-          mobilePreviewRef.current?.scrollIntoView({
-            block: 'start',
-            behavior: 'smooth',
-          });
         });
       }
 
@@ -299,9 +376,6 @@ export default function LandingJourneySection() {
             <button
               key={`${step.label}-summary`}
               type="button"
-              ref={(node) => {
-                summaryRefs.current[index] = node;
-              }}
               className={`lp-journey-summary-pill ${activeStep === index ? 'lp-journey-summary-pill-active' : ''}`}
               onClick={() => scrollToJourneyStep(index, 'summary')}
             >
@@ -338,8 +412,42 @@ export default function LandingJourneySection() {
             <JourneyPreviewBody step={currentStep} />
           </aside>
 
-          <aside ref={mobilePreviewRef} className="lp-journey-preview-mobile">
-            <JourneyPreviewBody step={currentStep} />
+          <aside className="lp-journey-preview-mobile">
+            <JourneyPreviewCopy step={currentStep} />
+
+            <div className="lp-journey-phone-carousel">
+              <div
+                ref={mobileCarouselRef}
+                className="lp-journey-phone-carousel-track"
+                aria-label="Swipe through the mobile message thread variants"
+              >
+                {JOURNEY_STEPS.map((step, index) => (
+                  <div
+                    key={`${step.label}-mobile-slide`}
+                    ref={(node) => {
+                      mobileSlideRefs.current[index] = node;
+                    }}
+                    className="lp-journey-phone-carousel-slide"
+                    aria-hidden={activeStep !== index}
+                  >
+                    <JourneyPhonePanel step={step} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="lp-journey-phone-carousel-dots" aria-label="Journey phone variants">
+                {JOURNEY_STEPS.map((step, index) => (
+                  <button
+                    key={`${step.label}-mobile-dot`}
+                    type="button"
+                    className={`lp-journey-phone-carousel-dot ${activeStep === index ? 'lp-journey-phone-carousel-dot-active' : ''}`}
+                    aria-label={`Show ${step.kicker} thread`}
+                    aria-pressed={activeStep === index}
+                    onClick={() => setActiveStep(index)}
+                  />
+                ))}
+              </div>
+            </div>
           </aside>
         </div>
       </div>

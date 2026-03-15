@@ -1,5 +1,6 @@
 import type { CSSProperties, ImgHTMLAttributes } from 'react';
 import logo from '../../../src/assets/logo.png';
+import { cn } from '../lib/utils';
 
 type TaxPingLogoSize = 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'xxxl';
 
@@ -25,7 +26,7 @@ export default function TaxPingLogo({
   style,
   ...props
 }: TaxPingLogoProps) {
-  const classes = ['tp-logo', SIZE_CLASS_MAP[size], className].filter(Boolean).join(' ');
+  const classes = cn('tp-logo', SIZE_CLASS_MAP[size], className);
 
   return <img src={logo} alt={alt} className={classes} style={style} {...props} />;
 }

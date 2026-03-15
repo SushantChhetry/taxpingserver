@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cn } from '../lib/utils';
 
 export default function PublicIntakeShell({
   eyebrow,
@@ -17,7 +18,7 @@ export default function PublicIntakeShell({
 }) {
   return (
     <div
-      className={`public-shell${fitViewport ? ' public-shell-fit' : ''}`}
+      className={cn('public-shell relative', fitViewport && 'public-shell-fit')}
       style={{
         minHeight: fitViewport ? '100svh' : '100vh',
         height: fitViewport ? '100svh' : undefined,
@@ -27,77 +28,62 @@ export default function PublicIntakeShell({
           'radial-gradient(circle at top left, rgba(59,111,232,0.16), transparent 28%), linear-gradient(180deg, #F8FBFF 0%, #F4F6FB 45%, #EFF3F9 100%)',
       }}
     >
-      <div className="public-shell-inner" style={{ maxWidth: 1120, margin: '0 auto', height: fitViewport ? '100%' : undefined }}>
+      <div
+        className="public-shell-inner mx-auto max-w-[1120px]"
+        style={{ height: fitViewport ? '100%' : undefined }}
+      >
         <div
-          className="public-stage"
+          className="public-stage grid items-stretch"
           style={{
-            display: 'grid',
             gridTemplateColumns: `repeat(auto-fit, minmax(${fitViewport ? 280 : 320}px, 1fr))`,
             gap: fitViewport ? 18 : 24,
-            alignItems: 'stretch',
             height: fitViewport ? '100%' : undefined,
             gridAutoRows: fitViewport ? 'minmax(0, 1fr)' : undefined,
           }}
         >
           <div
-            className="public-panel public-panel-main public-enter public-enter-delay-1"
+            className="public-panel public-panel-main public-enter public-enter-delay-1 flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-[rgba(226,230,240,0.95)] bg-[rgba(255,255,255,0.92)] shadow-[0_18px_60px_rgba(26,26,26,0.07)] backdrop-blur-[12px]"
             style={{
-              borderRadius: 28,
               padding: fitViewport ? '24px 24px 22px' : '34px 32px',
-              background: 'rgba(255,255,255,0.92)',
-              border: '1px solid rgba(226,230,240,0.95)',
-              boxShadow: '0 18px 60px rgba(26,26,26,0.07)',
-              backdropFilter: 'blur(12px)',
-              display: 'flex',
-              flexDirection: 'column',
               height: fitViewport ? '100%' : undefined,
-              minHeight: 0,
-              overflow: 'hidden',
             }}
           >
-            <div
-              className="public-chip public-chip-eyebrow"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '6px 10px',
-                borderRadius: 999,
-                background: '#EEF2FF',
-                color: '#2E5ED4',
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-              }}
-            >
+            <div className="public-chip public-chip-eyebrow inline-flex w-fit items-center gap-2 rounded-full bg-[#EEF2FF] px-[10px] py-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#2E5ED4]">
               {eyebrow}
             </div>
-            <div style={{ marginTop: fitViewport ? 14 : 20, fontSize: fitViewport ? 'clamp(28px, 4vw, 40px)' : 40, lineHeight: 1.02, fontWeight: 800, letterSpacing: '-0.04em', color: '#111827' }}>
+            <div
+              className="mt-[14px] font-extrabold tracking-[-0.04em] text-[#111827]"
+              style={{
+                fontSize: fitViewport ? 'clamp(28px, 4vw, 40px)' : 40,
+                lineHeight: 1.02,
+                marginTop: fitViewport ? 14 : 20,
+              }}
+            >
               {title}
             </div>
-            <div style={{ marginTop: 12, maxWidth: 620, fontSize: fitViewport ? 15 : 16, lineHeight: fitViewport ? 1.5 : 1.6, color: '#5B6472' }}>
+            <div
+              className="mt-3 max-w-[620px] text-[#5B6472]"
+              style={{
+                fontSize: fitViewport ? 15 : 16,
+                lineHeight: fitViewport ? 1.5 : 1.6,
+              }}
+            >
               {subtitle}
             </div>
-            <div style={{ marginTop: fitViewport ? 20 : 30, flex: fitViewport ? 1 : undefined, minHeight: 0 }}>{children}</div>
+            <div
+              className="min-h-0"
+              style={{ marginTop: fitViewport ? 20 : 30, flex: fitViewport ? 1 : undefined }}
+            >
+              {children}
+            </div>
           </div>
 
           <div
-            className="public-panel public-panel-side public-enter public-enter-delay-2"
+            className="public-panel public-panel-side public-enter public-enter-delay-2 flex min-h-0 flex-col justify-between overflow-hidden rounded-[28px] border border-[rgba(255,255,255,0.08)] bg-[#0F172A] text-white shadow-[0_18px_60px_rgba(15,23,42,0.22)]"
             style={{
-              borderRadius: 28,
               padding: fitViewport ? '22px 20px' : '28px 24px',
-              background: '#0F172A',
-              color: 'white',
-              border: '1px solid rgba(255,255,255,0.08)',
-              boxShadow: '0 18px 60px rgba(15,23,42,0.22)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
               gap: fitViewport ? 16 : 24,
               height: fitViewport ? '100%' : undefined,
-              minHeight: 0,
-              overflow: 'hidden',
             }}
           >
             {aside}

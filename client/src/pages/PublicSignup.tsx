@@ -14,7 +14,8 @@ import {
 import logo from '../../../src/assets/logo.png';
 import { getPublicPreparer, submitPublicSignup } from '../api';
 import PublicIntakeShell from '../components/PublicIntakeShell';
-import { ToastContainer, toast } from '../components/Toast';
+import { ToastContainer } from '../components/Toast';
+import { toast } from '../components/toast-store';
 import type { PublicPreparerData } from '../types';
 import {
   DEMO_PUBLIC_PREPARER,

@@ -14,7 +14,7 @@ import LandingTryText from './pages/LandingTryText';
 import DashboardThemeProvider from './components/DashboardThemeProvider';
 
 const PILOT_PREPARER_ID = 'feb93713-91a6-474f-8d56-cebdd606ebff';
-const LANDING_ONLY = import.meta.env.VITE_LANDING_ONLY === 'true';
+const FULL_APP_ENABLED = import.meta.env.VITE_ENABLE_APP === 'true';
 const LANDING_TITLE = 'TaxPing | Text-first Tax Prep Intake';
 const LANDING_DESCRIPTION =
   'See how TaxPing turns tax document collection into a smoother client flow with branded entry points, texting, reminders, and dashboard visibility.';
@@ -78,10 +78,10 @@ const Dashboard = lazy(async () => {
   }
 });
 
-const DEFAULT_TITLE = LANDING_ONLY ? LANDING_TITLE : 'TaxPing Dashboard';
-const DEFAULT_DESCRIPTION = LANDING_ONLY
-  ? LANDING_DESCRIPTION
-  : 'TaxPing helps tax preparers track client document collection, follow-ups, and seasonal workflow in one dashboard.';
+const DEFAULT_TITLE = FULL_APP_ENABLED ? 'TaxPing Dashboard' : LANDING_TITLE;
+const DEFAULT_DESCRIPTION = FULL_APP_ENABLED
+  ? 'TaxPing helps tax preparers track client document collection, follow-ups, and seasonal workflow in one dashboard.'
+  : LANDING_DESCRIPTION;
 
 function updateMetaDescription(content: string) {
   let element = document.querySelector('meta[name="description"]');
@@ -136,7 +136,7 @@ function AppMetadata() {
     } else if (/^\/landing\/try-text\/?$/.test(path)) {
       title = 'Text TaxPing | TaxPing';
       description = 'Open a prefilled text message to TaxPing from your phone.';
-    } else if (LANDING_ONLY && /^\/$/.test(path)) {
+    } else if (!FULL_APP_ENABLED && /^\/$/.test(path)) {
       title = LANDING_TITLE;
       description = LANDING_DESCRIPTION;
     } else if (/^\/landing\/?$/.test(path)) {
@@ -160,14 +160,12 @@ export default function App() {
           <Route
             path="/"
             element={
-              LANDING_ONLY ? <LandingPage /> : <Navigate to={`/dashboard/${PILOT_PREPARER_ID}/overview`} replace />
+              FULL_APP_ENABLED ? <Navigate to={`/dashboard/${PILOT_PREPARER_ID}/overview`} replace /> : <LandingPage />
             }
           />
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/landing/try-text" element={<LandingTryText />} />
-          {LANDING_ONLY ? (
-            <Route path="*" element={<Navigate to="/" replace />} />
-          ) : (
+          {FULL_APP_ENABLED ? (
             <>
               <Route path="/dashboard/:preparerId/overview" element={<Overview />} />
               <Route
@@ -187,6 +185,8 @@ export default function App() {
               <Route path="/public/:preparerId/signup" element={<PublicSignup />} />
               <Route path="/public/:preparerId/connect" element={<PublicLaunch />} />
             </>
+          ) : (
+            <Route path="*" element={<Navigate to="/" replace />} />
           )}
         </Routes>
       </DashboardThemeProvider>

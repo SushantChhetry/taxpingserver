@@ -17,7 +17,8 @@ import {
 import { getClientProfile, getDashboard, markClientDone, sendMessage, sendReminder, sendRequest } from '../api';
 import type { ClientProfileData, DashboardData, Message } from '../types';
 import { getInitials } from '../utils/time';
-import { toast, ToastContainer } from '../components/Toast';
+import { ToastContainer } from '../components/Toast';
+import { toast } from '../components/toast-store';
 import StatusBadge from '../components/StatusBadge';
 import Sidebar from '../components/Sidebar';
 import { getBrandThemeStyle, resolveBrandTheme } from '../utils/brandThemes';

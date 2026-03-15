@@ -1,33 +1,30 @@
 import type { Client } from '../types';
+import { cn } from '../lib/utils';
 
-const CONFIG: Record<Client['status'], { label: string; style: React.CSSProperties }> = {
+const CONFIG: Record<Client['status'], { label: string; className: string }> = {
   complete: {
     label: 'Complete',
-    style: { background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0' },
+    className: 'border-[#BBF7D0] bg-[#F0FDF4] text-[#16A34A]',
   },
   in_progress: {
     label: 'In Progress',
-    style: { background: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA' },
+    className: 'border-[#FED7AA] bg-[#FFF7ED] text-[#C2410C]',
   },
   not_started: {
     label: 'Not Started',
-    style: { background: '#F7F8FC', color: '#6B7280', border: '1px solid #E2E6F0' },
+    className: 'border-[#E2E6F0] bg-[#F7F8FC] text-[#6B7280]',
   },
 };
 
 export default function StatusBadge({ status }: { status: Client['status'] }) {
-  const { label, style } = CONFIG[status];
+  const { label, className } = CONFIG[status];
+
   return (
     <span
-      style={{
-        ...style,
-        fontSize: 11,
-        fontWeight: 600,
-        borderRadius: 9999,
-        padding: '3px 10px',
-        whiteSpace: 'nowrap',
-        display: 'inline-block',
-      }}
+      className={cn(
+        'inline-block whitespace-nowrap rounded-full border px-2.5 py-[3px] text-[11px] font-semibold',
+        className
+      )}
     >
       {label}
     </span>

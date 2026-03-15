@@ -1788,6 +1788,26 @@
   color: #f8fbff;
 }
 
+.lp-journey-phone-carousel {
+  display: none;
+}
+
+.lp-journey-phone-carousel-track {
+  display: flex;
+}
+
+.lp-journey-phone-carousel-slide {
+  flex: 0 0 100%;
+}
+
+.lp-journey-phone-carousel-dots {
+  display: flex;
+}
+
+.lp-journey-phone-carousel-dot {
+  appearance: none;
+}
+
 .lp-journey-phone-header {
   display: grid;
   gap: 4px;
@@ -2770,12 +2790,7 @@
   }
 
   .lp-journey-summary {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    padding: 2px 2px 8px;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
+    display: none;
   }
 
   .lp-journey-summary::-webkit-scrollbar {
@@ -2851,10 +2866,68 @@
 
   .lp-journey-preview-copy {
     gap: 8px;
+    min-height: 208px;
+    align-content: start;
   }
 
   .lp-journey-preview-copy strong {
     font-size: clamp(1.42rem, 7vw, 1.92rem);
+  }
+
+  .lp-journey-phone-carousel {
+    display: grid;
+    gap: 12px;
+  }
+
+  .lp-journey-phone-carousel-track {
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .lp-journey-phone-carousel-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lp-journey-phone-carousel-slide {
+    display: flex;
+    align-items: stretch;
+    scroll-snap-align: center;
+    padding: 0 1px;
+  }
+
+  .lp-journey-phone-carousel-slide .lp-journey-phone-panel {
+    width: 100%;
+    min-height: 100%;
+  }
+
+  .lp-journey-phone-carousel-dots {
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .lp-journey-phone-carousel-dot {
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(41, 88, 203, 0.18);
+    transition:
+      transform 180ms ease,
+      background-color 180ms ease,
+      box-shadow 180ms ease;
+    cursor: pointer;
+  }
+
+  .lp-journey-phone-carousel-dot-active {
+    transform: scale(1.12);
+    background: #2958cb;
+    box-shadow: 0 0 0 4px rgba(41, 88, 203, 0.12);
   }
 
   .lp-journey-phone-frame {
